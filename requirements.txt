@@ -1,0 +1,57 @@
+# SpeakSense Requirements
+# On-premise Voice Interaction System
+
+# ============ Core Dependencies ============
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+pyyaml==6.0.1
+
+# ============ ASR (Automatic Speech Recognition) ============
+openai-whisper==20231117
+# Alternative: pip install git+https://github.com/openai/whisper.git
+
+# ============ Text Processing ============
+jieba==0.42.1  # Chinese word segmentation
+rank-bm25==0.2.2  # BM25 algorithm for keyword search
+
+# ============ Embeddings & Vector Search ============
+sentence-transformers==2.2.2  # For BGE and other embedding models
+chromadb==0.4.18  # Vector database
+# Note: ChromaDB will automatically install required dependencies
+
+# ============ TTS (Text-to-Speech) ============
+# PaddleSpeech (Chinese + English TTS)
+paddlepaddle==2.5.2  # CPU version
+# For GPU: paddlepaddle-gpu==2.5.2
+paddlespeech==1.4.1
+
+# Alternative TTS option (requires internet):
+edge-tts==6.1.9  # Microsoft Edge TTS (optional)
+
+# ============ Audio Processing ============
+librosa==0.10.1  # Audio processing utilities
+soundfile==0.12.1  # Audio file I/O
+pydub==0.25.1  # Audio manipulation
+
+# ============ Database ============
+# SQLite is built into Python, no additional package needed
+
+# ============ Utilities ============
+requests==2.31.0
+numpy==1.24.3  # Pin version for compatibility
+torch==2.1.0  # For Whisper and embeddings (CPU version)
+# For GPU: torch==2.1.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+
+# ============ Development & Testing ============
+pytest==7.4.3
+httpx==0.25.1  # For testing FastAPI endpoints
+black==23.11.0  # Code formatting
+flake8==6.1.0  # Linting
+
+# ============ Optional Dependencies ============
+# Uncomment if needed:
+# python-dotenv==1.0.0  # For environment variables
+# loguru==0.7.2  # Better logging
+# prometheus-client==0.19.0  # Metrics monitoring

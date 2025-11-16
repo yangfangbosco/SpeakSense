@@ -1,0 +1,111 @@
+[
+  {
+    "question": "图书馆今天几点关门？",
+    "answer": "图书馆今天晚上9点关门。",
+    "alternative_questions": [
+      "图书馆什么时候关门？",
+      "今天闭馆时间是几点？",
+      "图书馆营业到几点？"
+    ],
+    "language": "zh",
+    "category": "hours"
+  },
+  {
+    "question": "图书馆周末开放吗？",
+    "answer": "是的，图书馆周末开放。周六和周日的开放时间是上午10点到下午6点。",
+    "alternative_questions": [
+      "周末图书馆开门吗？",
+      "星期六星期天图书馆开放吗？"
+    ],
+    "language": "zh",
+    "category": "hours"
+  },
+  {
+    "question": "如何借书？",
+    "answer": "借书很简单。请携带您的借书证或身份证到自助借书机或借阅台办理。每次最多可以借10本书，借期为30天。",
+    "alternative_questions": [
+      "怎么借阅图书？",
+      "借书流程是什么？",
+      "我想借书怎么办？"
+    ],
+    "language": "zh",
+    "category": "borrowing"
+  },
+  {
+    "question": "如何办理借书证？",
+    "answer": "办理借书证请携带身份证到一楼服务台。首次办理免费，当天就能拿到借书证。",
+    "alternative_questions": [
+      "怎么申请借书证？",
+      "在哪里可以办借书卡？",
+      "办图书卡需要什么？"
+    ],
+    "language": "zh",
+    "category": "membership"
+  },
+  {
+    "question": "图书馆有WiFi吗？",
+    "answer": "有的，图书馆提供免费WiFi。网络名称是 Library-Free，无需密码即可连接。",
+    "alternative_questions": [
+      "有无线网络吗？",
+      "可以上网吗？",
+      "WiFi密码是什么？"
+    ],
+    "language": "zh",
+    "category": "facilities"
+  },
+  {
+    "question": "What time does the library close today?",
+    "answer": "The library closes at 9 PM today.",
+    "alternative_questions": [
+      "When does the library shut down?",
+      "What are the closing hours?",
+      "Until when is the library open?"
+    ],
+    "language": "en",
+    "category": "hours"
+  },
+  {
+    "question": "Is the library open on weekends?",
+    "answer": "Yes, the library is open on weekends. Saturday and Sunday hours are 10 AM to 6 PM.",
+    "alternative_questions": [
+      "Are you open Saturday and Sunday?",
+      "Weekend opening hours?",
+      "Does the library open on Saturdays?"
+    ],
+    "language": "en",
+    "category": "hours"
+  },
+  {
+    "question": "How do I borrow books?",
+    "answer": "Borrowing books is easy. Please bring your library card or ID to the self-checkout machine or circulation desk. You can borrow up to 10 books for 30 days.",
+    "alternative_questions": [
+      "How can I check out books?",
+      "What's the book borrowing process?",
+      "How to get books from the library?"
+    ],
+    "language": "en",
+    "category": "borrowing"
+  },
+  {
+    "question": "How do I get a library card?",
+    "answer": "To get a library card, please bring your ID to the service desk on the first floor. First-time registration is free and you can get your card the same day.",
+    "alternative_questions": [
+      "How to apply for a library card?",
+      "Where can I get a library membership?",
+      "What do I need for a library card?"
+    ],
+    "language": "en",
+    "category": "membership"
+  },
+  {
+    "question": "Does the library have WiFi?",
+    "answer": "Yes, the library provides free WiFi. The network name is Library-Free and no password is required.",
+    "alternative_questions": [
+      "Is there wireless internet?",
+      "Can I use WiFi here?",
+      "What's the WiFi password?"
+    ],
+    "language": "en",
+    "category": "facilities"
+  }
+]

@@ -1,0 +1,57 @@
+# SpeakSense Configuration File
+
+# ASR Service Configuration
+asr:
+  model_type: "whisper"
+  model_name: "medium"  # Options: tiny, base, small, medium, large
+  language: "auto"  # auto, zh, en
+  device: "cpu"  # cpu or cuda
+  port: 8001
+
+# Embedding Model Configuration
+embedding:
+  model_type: "bge"
+  model_name: "BAAI/bge-m3"  # Multilingual BGE model for Chinese + English
+  device: "cpu"
+  max_length: 512
+
+# TTS Configuration
+tts:
+  model_type: "paddlespeech"
+  language: "auto"  # auto, zh, en
+  speed: 1.0
+  volume: 1.0
+  sample_rate: 24000
+
+# Vector Database Configuration
+vector_db:
+  type: "chromadb"
+  persist_directory: "./data/chromadb"
+  collection_name: "faq_embeddings"
+  distance_metric: "cosine"  # cosine, l2, ip
+
+# Retrieval Configuration
+retrieval:
+  port: 8002
+  bm25_weight: 0.3  # Weight for BM25 score
+  vector_weight: 0.7  # Weight for vector similarity score
+  top_k_bm25: 10  # Number of candidates from BM25
+  top_k_vector: 10  # Number of candidates from vector search
+  final_top_k: 1  # Number of final results to return
+
+# Admin Service Configuration
+admin:
+  port: 8003
+  audio_output_dir: "./data/audio_files"
+  audio_format: "wav"  # wav, mp3
+
+# Database Configuration
+database:
+  type: "sqlite"
+  path: "./data/faq.db"
+
+# Preprocessing Configuration
+preprocessing:
+  enable_synonym_normalization: true
+  enable_typo_correction: true
+  synonym_dict_path: "./config/synonyms.json"

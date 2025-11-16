@@ -1,0 +1,17 @@
+{
+  "zh": {
+    "关闭": ["关闭", "关门", "闭馆", "停止营业"],
+    "开放": ["开放", "开门", "营业", "开馆"],
+    "时间": ["时间", "时候", "几点"],
+    "借书": ["借书", "借阅", "租借"],
+    "还书": ["还书", "归还", "退还"],
+    "位置": ["位置", "地方", "在哪", "在哪里"]
+  },
+  "en": {
+    "close": ["close", "shut", "closing time", "shut down"],
+    "open": ["open", "opening", "operating"],
+    "borrow": ["borrow", "check out", "rent"],
+    "return": ["return", "give back", "bring back"],
+    "location": ["location", "place", "where", "position"]
+  }
+}
