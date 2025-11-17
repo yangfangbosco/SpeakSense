@@ -44,6 +44,14 @@
                     </a>
                     <a
                         href="#"
+                        :class="['nav-item', { active: currentPage === 'query' }]"
+                        @click.prevent="currentPage = 'query'"
+                    >
+                        <span class="icon">🔍</span>
+                        <span>Query Testing</span>
+                    </a>
+                    <a
+                        href="#"
                         :class="['nav-item', { active: currentPage === 'settings' }]"
                         @click.prevent="currentPage = 'settings'"
                     >
@@ -212,6 +220,124 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query Testing Page -->
+                <div v-if="currentPage === 'query'" class="page">
+                    <div class="page-header">
+                        <h2>Query Testing</h2>
+                    </div>
+
+                    <div class="card">
+                        <h3>Test Text Query</h3>
+                        <div class="query-form">
+                            <div class="form-group">
+                                <label>Enter Your Question</label>
+                                <input
+                                    v-model="queryForm.text"
+                                    type="text"
+                                    class="input"
+                                    placeholder="e.g., 图书馆几点开门"
+                                    @keyup.enter="testQuery"
+                                >
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Language</label>
+                                    <select v-model="queryForm.language" class="input">
+                                        <option value="auto">Auto Detect</option>
+                                        <option value="zh">Chinese</option>
+                                        <option value="en">English</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Search Method</label>
+                                    <select v-model="queryForm.method" class="input">
+                                        <option value="hybrid">Hybrid (BM25 + Vector)</option>
+                                        <option value="bm25">BM25 Only</option>
+                                        <option value="vector">Vector Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button @click="testQuery" class="btn btn-primary" :disabled="!queryForm.text">
+                                <span>🔍</span> Search
+                            </button>
+                        </div>
+
+                        <div v-if="queryResult" class="query-result">
+                            <div v-if="queryResult.success" class="result-card success">
+                                <div class="result-header">
+                                    <h4>✓ Match Found</h4>
+                                    <span class="confidence-badge">
+                                        {{ (queryResult.data.confidence * 100).toFixed(1) }}% confidence
+                                    </span>
+                                </div>
+                                <div class="result-body">
+                                    <div class="result-item">
+                                        <strong>Question:</strong>
+                                        <p>{{ queryResult.data.question }}</p>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>Answer:</strong>
+                                        <p>{{ queryResult.data.answer }}</p>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>Matched By:</strong>
+                                        <span class="badge">{{ queryResult.data.matched_by }}</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>Audio Response:</strong>
+                                        <audio v-if="queryResult.data.audio_path" controls class="audio-player">
+                                            <source :src="`/data/${queryResult.data.audio_path}`" type="audio/mpeg">
+                                        </audio>
+                                        <span v-else class="text-muted">No audio available</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="result-card error">
+                                <h4>✗ No Match Found</h4>
+                                <p>{{ queryResult.message }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Test Audio Query (ASR)</h3>
+                        <div class="asr-form">
+                            <div class="form-group">
+                                <label>Upload Audio File</label>
+                                <input
+                                    type="file"
+                                    @change="handleAudioFile"
+                                    accept="audio/*"
+                                    class="file-input"
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label>Language</label>
+                                <select v-model="asrForm.language" class="input">
+                                    <option value="auto">Auto Detect</option>
+                                    <option value="zh">Chinese</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            <button
+                                @click="testASR"
+                                class="btn btn-primary"
+                                :disabled="!asrForm.audioFile"
+                            >
+                                <span>🎤</span> Transcribe & Search
+                            </button>
+                        </div>
+
+                        <div v-if="asrResult" class="query-result">
+                            <div class="result-card">
+                                <h4>Transcription Result</h4>
+                                <p><strong>Recognized Text:</strong> {{ asrResult.text }}</p>
+                                <p><strong>Language:</strong> <span class="badge">{{ asrResult.language }}</span></p>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -878,6 +878,122 @@ textarea.input {
 }
 
 /* ========================================
+   Query Testing
+   ======================================== */
+
+.query-form,
+.asr-form {
+    margin-bottom: 2rem;
+}
+
+.query-result {
+    margin-top: 2rem;
+}
+
+.result-card {
+    background: var(--bg-secondary);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.result-card.success {
+    border-color: var(--success-color);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+}
+
+.result-card.error {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.2);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.result-header h4 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.confidence-badge {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--bg-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    box-shadow: 0 0 15px var(--glow-primary);
+}
+
+.result-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.result-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.result-item strong {
+    color: var(--primary-color);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.result-item p {
+    color: var(--text-primary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.audio-player {
+    width: 100%;
+    max-width: 500px;
+    height: 40px;
+    margin-top: 0.5rem;
+}
+
+.file-input {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.file-input:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.file-input::-webkit-file-upload-button {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--bg-color);
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 1rem;
+}
+
+/* ========================================
    Responsive
    ======================================== */
 

@@ -51,7 +51,22 @@ createApp({
                 show: false,
                 message: '',
                 type: 'info'
-            }
+            },
+
+            // Query Testing
+            queryForm: {
+                text: '',
+                language: 'auto',
+                method: 'hybrid'
+            },
+            queryResult: null,
+
+            // ASR Testing
+            asrForm: {
+                audioFile: null,
+                language: 'auto'
+            },
+            asrResult: null
         };
     },
 
@@ -289,6 +304,121 @@ createApp({
             } catch (error) {
                 console.error('Failed to regenerate audio:', error);
                 this.showNotification('Failed to regenerate audio', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // ========================================
+        // Query Testing
+        // ========================================
+        async testQuery() {
+            if (!this.queryForm.text.trim()) {
+                this.showNotification('Please enter a question', 'error');
+                return;
+            }
+
+            try {
+                this.loading = true;
+                this.queryResult = null;
+
+                const endpoint = this.queryForm.method === 'hybrid'
+                    ? '/retrieval/best_answer'
+                    : `/retrieval/search_${this.queryForm.method}`;
+
+                const response = await axios.post(
+                    `${this.config.retrievalUrl}${endpoint}`,
+                    {
+                        query: this.queryForm.text,
+                        language: this.queryForm.language,
+                        top_k: 1
+                    }
+                );
+
+                if (response.data) {
+                    // Handle both single result and array results
+                    const result = Array.isArray(response.data)
+                        ? response.data[0]
+                        : response.data;
+
+                    if (result) {
+                        this.queryResult = {
+                            success: true,
+                            data: result
+                        };
+                        this.showNotification('Match found!', 'success');
+                    } else {
+                        this.queryResult = {
+                            success: false,
+                            message: 'No matching FAQ found for your query.'
+                        };
+                        this.showNotification('No match found', 'warning');
+                    }
+                }
+            } catch (error) {
+                console.error('Query test failed:', error);
+                this.queryResult = {
+                    success: false,
+                    message: error.response?.data?.detail || 'Query failed. Please check if services are running.'
+                };
+                this.showNotification('Query failed', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // ========================================
+        // ASR Testing
+        // ========================================
+        handleAudioFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.asrForm.audioFile = file;
+                this.asrResult = null;
+                this.queryResult = null;
+            }
+        },
+
+        async testASR() {
+            if (!this.asrForm.audioFile) {
+                this.showNotification('Please select an audio file', 'error');
+                return;
+            }
+
+            try {
+                this.loading = true;
+                this.asrResult = null;
+
+                // Step 1: Transcribe audio
+                const formData = new FormData();
+                formData.append('audio', this.asrForm.audioFile);
+                formData.append('language', this.asrForm.language);
+
+                const asrResponse = await axios.post(
+                    `${this.config.asrUrl}/asr/transcribe`,
+                    formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    }
+                );
+
+                this.asrResult = asrResponse.data;
+                this.showNotification('Audio transcribed successfully', 'success');
+
+                // Step 2: Automatically search with transcribed text
+                if (this.asrResult.text) {
+                    this.queryForm.text = this.asrResult.text;
+                    this.queryForm.language = this.asrResult.language;
+                    await this.testQuery();
+                }
+            } catch (error) {
+                console.error('ASR test failed:', error);
+                this.showNotification(
+                    error.response?.data?.detail || 'ASR transcription failed',
+                    'error'
+                );
             } finally {
                 this.loading = false;
             }
