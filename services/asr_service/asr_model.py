@@ -39,9 +39,20 @@ class WhisperASR:
         self._load_model()
 
     def _load_model(self):
-        """Load Whisper model"""
-        print(f"Loading Whisper model: {self.model_name} on {self.device}...")
-        self.model = whisper.load_model(self.model_name, device=self.device)
+        """Load Whisper model from local directory or download"""
+        # Check for local model first
+        project_root = Path(__file__).parent.parent.parent
+        local_model_dir = project_root / "models" / "whisper"
+        local_model_path = local_model_dir / f"{self.model_name}.pt"
+
+        if local_model_path.exists():
+            print(f"Loading Whisper model from local path: {local_model_path}")
+            self.model = whisper.load_model(self.model_name, device=self.device, download_root=str(local_model_dir))
+        else:
+            print(f"Loading Whisper model: {self.model_name} on {self.device}...")
+            print(f"(To use local model, place {self.model_name}.pt in: {local_model_dir})")
+            self.model = whisper.load_model(self.model_name, device=self.device, download_root=str(local_model_dir))
+
         print(f"Whisper model loaded successfully!")
 
     def transcribe(

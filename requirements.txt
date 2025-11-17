@@ -23,8 +23,8 @@ chromadb==0.4.18  # Vector database
 
 # ============ TTS (Text-to-Speech) ============
 # PaddleSpeech (Chinese + English TTS)
-paddlepaddle==2.5.2  # CPU version
-# For GPU: paddlepaddle-gpu==2.5.2
+paddlepaddle==2.6.2  # CPU version (updated for compatibility)
+# For GPU: paddlepaddle-gpu==2.6.2
 paddlespeech==1.4.1
 
 # Alternative TTS option (requires internet):

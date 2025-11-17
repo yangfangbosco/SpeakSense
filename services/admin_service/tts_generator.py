@@ -110,7 +110,7 @@ class EdgeTTS:
     def __init__(self, language: str = "auto", **kwargs):
         self.language = language
 
-    def generate(
+    async def generate(
         self,
         text: str,
         output_path: str,
@@ -119,7 +119,6 @@ class EdgeTTS:
         """Generate speech using Edge TTS"""
         try:
             import edge_tts
-            import asyncio
 
             lang = language or self.language
 
@@ -141,11 +140,8 @@ class EdgeTTS:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
             # Generate speech (async)
-            async def _generate():
-                communicate = edge_tts.Communicate(text, voice)
-                await communicate.save(output_path)
-
-            asyncio.run(_generate())
+            communicate = edge_tts.Communicate(text, voice)
+            await communicate.save(output_path)
 
             return output_path
 
@@ -167,8 +163,15 @@ class TTSGenerator:
         self.volume = tts_config.get('volume', 1.0)
         self.sample_rate = tts_config.get('sample_rate', 24000)
 
-        self.output_dir = admin_config.get('audio_output_dir', './data/audio_files')
+        output_dir = admin_config.get('audio_output_dir', './data/audio_files')
         self.audio_format = admin_config.get('audio_format', 'wav')
+
+        # Convert to absolute path relative to project root
+        if not Path(output_dir).is_absolute():
+            project_root = Path(__file__).parent.parent.parent
+            self.output_dir = str(project_root / output_dir)
+        else:
+            self.output_dir = output_dir
 
         # Ensure output directory exists
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
@@ -185,7 +188,7 @@ class TTSGenerator:
             print(f"Warning: Failed to initialize TTS model: {e}")
             self.model = None
 
-    def generate_audio(
+    async def generate_audio(
         self,
         text: str,
         answer_id: str,
@@ -212,11 +215,21 @@ class TTSGenerator:
         output_path = os.path.join(self.output_dir, filename)
 
         # Generate audio
-        self.model.generate(
-            text=text,
-            output_path=output_path,
-            language=language
-        )
+        if hasattr(self.model.generate, '__call__'):
+            # Check if it's async
+            import inspect
+            if inspect.iscoroutinefunction(self.model.generate):
+                await self.model.generate(
+                    text=text,
+                    output_path=output_path,
+                    language=language
+                )
+            else:
+                self.model.generate(
+                    text=text,
+                    output_path=output_path,
+                    language=language
+                )
 
         # Return relative path
         return f"audio_files/{filename}"

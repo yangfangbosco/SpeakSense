@@ -20,10 +20,15 @@ class Database:
         if db_path is None:
             db_path = config.get('database.path', './data/faq.db')
 
+        # Convert to absolute path relative to project root
+        if not Path(db_path).is_absolute():
+            project_root = Path(__file__).parent.parent
+            db_path = project_root / db_path
+
         # Ensure directory exists
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self.db_path = db_path
+        self.db_path = str(db_path)
         self.init_db()
 
     def get_connection(self):

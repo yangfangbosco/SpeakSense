@@ -3,21 +3,21 @@
 # ASR Service Configuration
 asr:
   model_type: "whisper"
-  model_name: "medium"  # Options: tiny, base, small, medium, large
+  model_name: "base"  # Options: tiny, base, small, medium, large (using base for speed)
   language: "auto"  # auto, zh, en
-  device: "cpu"  # cpu or cuda
+  device: "cpu"  # cpu (MPS has compatibility issues with current PyTorch)
   port: 8001
 
 # Embedding Model Configuration
 embedding:
   model_type: "bge"
-  model_name: "BAAI/bge-m3"  # Multilingual BGE model for Chinese + English
-  device: "cpu"
+  model_name: "BAAI/bge-small-zh-v1.5"  # Smaller BGE model (faster download, 100MB vs 2GB)
+  device: "cpu"  # cpu for now (MPS support varies)
   max_length: 512
 
 # TTS Configuration
 tts:
-  model_type: "paddlespeech"
+  model_type: "edge-tts"  # Using edge-tts (M2 compatible, requires internet)
   language: "auto"  # auto, zh, en
   speed: 1.0
   volume: 1.0
@@ -43,7 +43,7 @@ retrieval:
 admin:
   port: 8003
   audio_output_dir: "./data/audio_files"
-  audio_format: "wav"  # wav, mp3
+  audio_format: "mp3"  # wav, mp3 (Edge-TTS generates MP3 format)
 
 # Database Configuration
 database:

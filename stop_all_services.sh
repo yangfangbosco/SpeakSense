@@ -14,5 +14,11 @@ lsof -ti:8002 | xargs kill -9 2>/dev/null
 echo "Stopping Admin Service (port 8003)..."
 lsof -ti:8003 | xargs kill -9 2>/dev/null
 
+echo "Stopping Web Testing Portal (port 8080)..."
+lsof -ti:8080 | xargs kill -9 2>/dev/null
+
+echo "Stopping Admin Portal (port 8090)..."
+lsof -ti:8090 | xargs kill -9 2>/dev/null
+
 echo ""
 echo "All services stopped!"

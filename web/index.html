@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeakSense Testing Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            background: white;
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            opacity: 0.7;
+        }
+
+        .tab.active {
+            opacity: 1;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .tab:hover {
+            opacity: 1;
+        }
+
+        .content {
+            background: white;
+            border-radius: 0 8px 8px 8px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .result {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .result h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .result pre {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .error {
+            background: #fee;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .recording {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .service-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .service-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .service-card h4 {
+            margin-bottom: 8px;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 SpeakSense Testing Portal</h1>
+            <p>On-premise Voice Interaction System</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('query')">Query System</div>
+            <div class="tab" onclick="switchTab('asr')">Test ASR</div>
+            <div class="tab" onclick="switchTab('admin')">Admin Panel</div>
+            <div class="tab" onclick="switchTab('status')">System Status</div>
+        </div>
+
+        <div class="content">
+            <!-- Query Panel -->
+            <div id="query-panel" class="panel active">
+                <div class="section">
+                    <h2>Query the System</h2>
+                    <div class="card">
+                        <div class="input-group">
+                            <label>Enter your question:</label>
+                            <input type="text" id="query-input" placeholder="e.g., What time does the library close?" />
+                        </div>
+                        <div class="input-group">
+                            <label>Language:</label>
+                            <select id="query-language">
+                                <option value="auto">Auto-detect</option>
+                                <option value="zh">Chinese</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="querySystem()">Search Answer</button>
+                        <div id="query-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ASR Panel -->
+            <div id="asr-panel" class="panel">
+                <div class="section">
+                    <h2>Test Speech Recognition</h2>
+                    <div class="card">
+                        <p><strong>Note:</strong> Click "Record" and speak your question. Click "Stop" when done.</p>
+                        <div class="audio-controls">
+                            <button class="btn success" id="record-btn" onclick="startRecording()">🎤 Start Recording</button>
+                            <button class="btn danger" id="stop-btn" onclick="stopRecording()" disabled>⏹ Stop Recording</button>
+                            <span id="recording-status"></span>
+                        </div>
+                        <div id="asr-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="admin-panel" class="panel">
+                <div class="section">
+                    <h2>Add New FAQ</h2>
+                    <div class="card">
+                        <div class="input-group">
+                            <label>Question:</label>
+                            <input type="text" id="faq-question" placeholder="What time does the library open?" />
+                        </div>
+                        <div class="input-group">
+                            <label>Answer:</label>
+                            <textarea id="faq-answer" placeholder="The library opens at 9 AM on weekdays."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Alternative Questions (one per line):</label>
+                            <textarea id="faq-alternatives" placeholder="When does the library open?&#10;Library opening hours?"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Language:</label>
+                            <select id="faq-language">
+                                <option value="auto">Auto-detect</option>
+                                <option value="zh">Chinese</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Category:</label>
+                            <input type="text" id="faq-category" placeholder="hours" />
+                        </div>
+                        <button class="btn" onclick="addFAQ()">Add FAQ</button>
+                        <button class="btn secondary" onclick="rebuildIndices()" style="margin-left: 10px;">Rebuild Indices</button>
+                        <button class="btn secondary" onclick="regenerateAllAudio()" style="margin-left: 10px;">Regenerate All Audio</button>
+                        <div id="admin-result"></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>All FAQs</h2>
+                    <button class="btn secondary" onclick="loadFAQs()">Load FAQs</button>
+                    <div id="faq-list"></div>
+                </div>
+            </div>
+
+            <!-- Status Panel -->
+            <div id="status-panel" class="panel">
+                <div class="section">
+                    <h2>Service Status</h2>
+                    <button class="btn secondary" onclick="checkServices()">Refresh Status</button>
+                    <div class="service-status" id="service-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const ASR_URL = 'http://localhost:8001';
+        const RETRIEVAL_URL = 'http://localhost:8002';
+        const ADMIN_URL = 'http://localhost:8003';
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-panel').classList.add('active');
+
+            if (tabName === 'status') {
+                checkServices();
+            }
+        }
+
+        // Query System
+        async function querySystem() {
+            const query = document.getElementById('query-input').value;
+            const language = document.getElementById('query-language').value;
+            const resultDiv = document.getElementById('query-result');
+
+            if (!query) {
+                resultDiv.innerHTML = '<div class="result error">Please enter a question</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="result"><div class="loader"></div> Searching...</div>';
+
+            try {
+                const response = await fetch(`${RETRIEVAL_URL}/retrieval/best_answer`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({query, language})
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✓ Match Found</h3>
+                            <p><strong>Question:</strong> ${data.question}</p>
+                            <p><strong>Answer:</strong> ${data.answer}</p>
+                            <p><strong>Confidence:</strong> ${(data.confidence * 100).toFixed(1)}%</p>
+                            <p><strong>Audio:</strong>
+                                <audio controls src="/data/${data.audio_path}">
+                                    Your browser does not support audio playback.
+                                </audio>
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    resultDiv.innerHTML = `<div class="result error">No matching FAQ found</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Error: ${error.message}<br>Make sure services are running!</div>`;
+            }
+        }
+
+        // Audio Recording
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    await transcribeAudio(audioBlob);
+                };
+
+                mediaRecorder.start();
+                document.getElementById('record-btn').disabled = true;
+                document.getElementById('stop-btn').disabled = false;
+                document.getElementById('recording-status').innerHTML = '<span class="status recording">🔴 Recording...</span>';
+            } catch (error) {
+                alert('Error accessing microphone: ' + error.message);
+            }
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            document.getElementById('record-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            document.getElementById('recording-status').innerHTML = '<span class="status">⏹ Stopped</span>';
+        }
+
+        async function transcribeAudio(audioBlob) {
+            const resultDiv = document.getElementById('asr-result');
+            resultDiv.innerHTML = '<div class="result"><div class="loader"></div> Transcribing...</div>';
+
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'recording.mp3');
+            formData.append('language', 'auto');
+
+            try {
+                const response = await fetch(`${ASR_URL}/asr/transcribe`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✓ Transcription Complete</h3>
+                            <p><strong>Text:</strong> ${data.text}</p>
+                            <p><strong>Language:</strong> ${data.language || 'Unknown'}</p>
+                            <button class="btn" onclick="queryWithText('${data.text}')">Search This Question</button>
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    resultDiv.innerHTML = `<div class="result error">Transcription failed: ${error.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function queryWithText(text) {
+            document.getElementById('query-input').value = text;
+            switchTab('query');
+            document.querySelector('.tab').click();
+            querySystem();
+        }
+
+        // Admin Functions
+        async function addFAQ() {
+            const question = document.getElementById('faq-question').value;
+            const answer = document.getElementById('faq-answer').value;
+            const alternatives = document.getElementById('faq-alternatives').value.split('\n').filter(x => x.trim());
+            const language = document.getElementById('faq-language').value;
+            const category = document.getElementById('faq-category').value;
+            const resultDiv = document.getElementById('admin-result');
+
+            if (!question || !answer) {
+                resultDiv.innerHTML = '<div class="result error">Question and answer are required</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="result"><div class="loader"></div> Creating FAQ and generating audio...</div>';
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/admin/faq`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        question,
+                        answer,
+                        alternative_questions: alternatives,
+                        language,
+                        category
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✓ FAQ Created Successfully</h3>
+                            <p><strong>Answer ID:</strong> ${data.answer_id}</p>
+                            <p><strong>Audio:</strong> ${data.audio_path}</p>
+                            <p><em>Remember to rebuild indices!</em></p>
+                        </div>
+                    `;
+                    // Clear form
+                    document.getElementById('faq-question').value = '';
+                    document.getElementById('faq-answer').value = '';
+                    document.getElementById('faq-alternatives').value = '';
+                } else {
+                    const error = await response.json();
+                    resultDiv.innerHTML = `<div class="result error">Error: ${error.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function rebuildIndices() {
+            const resultDiv = document.getElementById('admin-result');
+            resultDiv.innerHTML = '<div class="result"><div class="loader"></div> Rebuilding indices...</div>';
+
+            try {
+                const response = await fetch(`${RETRIEVAL_URL}/retrieval/rebuild_indices`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✓ Indices Rebuilt</h3>
+                            <p>BM25 documents: ${data.bm25_documents}</p>
+                            <p>Vector documents: ${data.vector_documents}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">Failed to rebuild indices</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function regenerateAllAudio() {
+            const resultDiv = document.getElementById('admin-result');
+            resultDiv.innerHTML = '<div class="result"><div class="loader"></div> Regenerating all audio files...</div>';
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/admin/regenerate_all_audio`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    let errorDetails = '';
+                    if (data.errors && data.errors.length > 0) {
+                        errorDetails = '<br><br><strong>Errors:</strong><ul>';
+                        data.errors.forEach(err => {
+                            errorDetails += `<li>${err.question}: ${err.error}</li>`;
+                        });
+                        errorDetails += '</ul>';
+                    }
+                    resultDiv.innerHTML = `
+                        <div class="result ${data.failed > 0 ? 'warning' : 'success'}">
+                            <h3>✓ Audio Regeneration Complete</h3>
+                            <p>Total FAQs: ${data.total}</p>
+                            <p>Successful: ${data.success}</p>
+                            <p>Failed: ${data.failed}</p>
+                            ${errorDetails}
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    resultDiv.innerHTML = `<div class="result error">Failed to regenerate audio: ${error.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadFAQs() {
+            const listDiv = document.getElementById('faq-list');
+            listDiv.innerHTML = '<div class="result"><div class="loader"></div> Loading FAQs...</div>';
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/admin/faqs`);
+                if (response.ok) {
+                    const faqs = await response.json();
+                    if (faqs.length === 0) {
+                        listDiv.innerHTML = '<div class="result">No FAQs found</div>';
+                    } else {
+                        listDiv.innerHTML = faqs.map(faq => `
+                            <div class="card">
+                                <h4>${faq.question}</h4>
+                                <p><strong>Answer:</strong> ${faq.answer}</p>
+                                <p><strong>Language:</strong> ${faq.language} | <strong>Category:</strong> ${faq.category}</p>
+                                <p><strong>Audio:</strong> ${faq.audio_path}</p>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                listDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Service Status
+        async function checkServices() {
+            const statusDiv = document.getElementById('service-status');
+            statusDiv.innerHTML = '<div class="loader"></div> Checking services...';
+
+            const services = [
+                { name: 'ASR Service', url: ASR_URL, port: 8001 },
+                { name: 'Retrieval Service', url: RETRIEVAL_URL, port: 8002 },
+                { name: 'Admin Service', url: ADMIN_URL, port: 8003 }
+            ];
+
+            let html = '';
+            for (const service of services) {
+                try {
+                    const response = await fetch(`${service.url}/health`, { timeout: 3000 });
+                    const isOnline = response.ok;
+                    html += `
+                        <div class="service-card">
+                            <h4>${service.name}</h4>
+                            <span class="status ${isOnline ? 'online' : 'offline'}">
+                                ${isOnline ? '✓ Online' : '✗ Offline'}
+                            </span>
+                            <p style="margin-top: 8px; font-size: 0.9rem; color: #666;">
+                                Port: ${service.port}
+                            </p>
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `
+                        <div class="service-card">
+                            <h4>${service.name}</h4>
+                            <span class="status offline">✗ Offline</span>
+                            <p style="margin-top: 8px; font-size: 0.9rem; color: #666;">
+                                Port: ${service.port}
+                            </p>
+                        </div>
+                    `;
+                }
+            }
+            statusDiv.innerHTML = html;
+        }
+
+        // Check services on load
+        window.addEventListener('load', () => {
+            checkServices();
+        });
+    </script>
+</body>
+</html>

@@ -45,8 +45,8 @@ class BM25Search:
             })
 
             # Preprocess and tokenize
-            processed = preprocessor.preprocess(faq.question, faq.language)
-            self.tokenized_corpus.append(processed['tokens'])
+            tokens = preprocessor.preprocess_for_bm25(faq.question, faq.language)
+            self.tokenized_corpus.append(tokens)
 
             # Add alternative questions
             for alt_question in faq.alternative_questions:
@@ -60,8 +60,8 @@ class BM25Search:
                 })
 
                 # Preprocess and tokenize alternative
-                alt_processed = preprocessor.preprocess(alt_question, faq.language)
-                self.tokenized_corpus.append(alt_processed['tokens'])
+                alt_tokens = preprocessor.preprocess_for_bm25(alt_question, faq.language)
+                self.tokenized_corpus.append(alt_tokens)
 
         # Build BM25 index
         if self.tokenized_corpus:
@@ -94,8 +94,7 @@ class BM25Search:
             return []
 
         # Preprocess query
-        processed_query = preprocessor.preprocess(query, language)
-        query_tokens = processed_query['tokens']
+        query_tokens = preprocessor.preprocess_for_bm25(query, language)
 
         if not query_tokens:
             return []

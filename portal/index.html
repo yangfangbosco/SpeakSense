@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeakSense Admin Portal</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading State -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <!-- Main Container -->
+        <div class="container">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h1>🎙️ SpeakSense</h1>
+                    <p class="subtitle">Admin Portal</p>
+                </div>
+
+                <nav class="nav-menu">
+                    <a
+                        href="#"
+                        :class="['nav-item', { active: currentPage === 'dashboard' }]"
+                        @click.prevent="currentPage = 'dashboard'"
+                    >
+                        <span class="icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                    <a
+                        href="#"
+                        :class="['nav-item', { active: currentPage === 'faq' }]"
+                        @click.prevent="currentPage = 'faq'"
+                    >
+                        <span class="icon">📝</span>
+                        <span>FAQ Management</span>
+                    </a>
+                    <a
+                        href="#"
+                        :class="['nav-item', { active: currentPage === 'settings' }]"
+                        @click.prevent="currentPage = 'settings'"
+                    >
+                        <span class="icon">⚙️</span>
+                        <span>System Settings</span>
+                    </a>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="service-status">
+                        <h3>Services</h3>
+                        <div class="status-item">
+                            <span class="status-dot" :class="{ online: services.asr }"></span>
+                            <span>ASR Service</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-dot" :class="{ online: services.retrieval }"></span>
+                            <span>Retrieval</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-dot" :class="{ online: services.admin }"></span>
+                            <span>Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Dashboard Page -->
+                <div v-if="currentPage === 'dashboard'" class="page">
+                    <div class="page-header">
+                        <h2>Dashboard</h2>
+                        <button @click="refreshStats" class="btn btn-secondary">
+                            <span>🔄</span> Refresh
+                        </button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📚</div>
+                            <div class="stat-content">
+                                <div class="stat-value">{{ stats.totalFAQs }}</div>
+                                <div class="stat-label">Total FAQs</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔍</div>
+                            <div class="stat-content">
+                                <div class="stat-value">{{ stats.bm25Documents }}</div>
+                                <div class="stat-label">BM25 Documents</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🧠</div>
+                            <div class="stat-content">
+                                <div class="stat-value">{{ stats.vectorDocuments }}</div>
+                                <div class="stat-label">Vector Documents</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🌐</div>
+                            <div class="stat-content">
+                                <div class="stat-value">{{ stats.languages.length }}</div>
+                                <div class="stat-label">Languages</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Quick Actions</h3>
+                        <div class="actions-grid">
+                            <button @click="rebuildIndices" class="action-btn">
+                                <span class="action-icon">🔨</span>
+                                <span class="action-text">Rebuild Indices</span>
+                            </button>
+                            <button @click="regenerateAllAudio" class="action-btn">
+                                <span class="action-icon">🎵</span>
+                                <span class="action-text">Regenerate Audio</span>
+                            </button>
+                            <button @click="currentPage = 'faq'" class="action-btn">
+                                <span class="action-icon">➕</span>
+                                <span class="action-text">Add New FAQ</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card" v-if="stats.categories.length > 0">
+                        <h3>FAQ Categories</h3>
+                        <div class="categories">
+                            <span v-for="cat in stats.categories" :key="cat" class="category-tag">
+                                {{ cat }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Management Page -->
+                <div v-if="currentPage === 'faq'" class="page">
+                    <div class="page-header">
+                        <h2>FAQ Management</h2>
+                        <button @click="showAddModal = true" class="btn btn-primary">
+                            <span>➕</span> Add New FAQ
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="table-header">
+                            <input
+                                v-model="searchQuery"
+                                type="text"
+                                placeholder="Search FAQs..."
+                                class="search-input"
+                            >
+                            <button @click="loadFAQs" class="btn btn-secondary">
+                                <span>🔄</span> Refresh
+                            </button>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="faq-table">
+                                <thead>
+                                    <tr>
+                                        <th>Question</th>
+                                        <th>Answer</th>
+                                        <th>Language</th>
+                                        <th>Category</th>
+                                        <th>Audio</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="faq in filteredFAQs" :key="faq.answer_id">
+                                        <td>
+                                            <div class="faq-question">{{ faq.question }}</div>
+                                            <div v-if="faq.alternative_questions.length > 0" class="alt-questions">
+                                                +{{ faq.alternative_questions.length }} alternatives
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="faq-answer">{{ truncate(faq.answer, 60) }}</div>
+                                        </td>
+                                        <td><span class="badge">{{ faq.language }}</span></td>
+                                        <td><span class="badge badge-secondary">{{ faq.category }}</span></td>
+                                        <td>
+                                            <audio v-if="faq.audio_path" controls class="mini-audio">
+                                                <source :src="`/data/${faq.audio_path}`" type="audio/mpeg">
+                                            </audio>
+                                            <span v-else class="text-muted">No audio</span>
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button @click="editFAQ(faq)" class="btn-icon" title="Edit">
+                                                    ✏️
+                                                </button>
+                                                <button @click="deleteFAQ(faq)" class="btn-icon danger" title="Delete">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="filteredFAQs.length === 0">
+                                        <td colspan="6" class="text-center text-muted">
+                                            No FAQs found
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Settings Page -->
+                <div v-if="currentPage === 'settings'" class="page">
+                    <div class="page-header">
+                        <h2>System Settings</h2>
+                    </div>
+
+                    <div class="card">
+                        <h3>Service Configuration</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>ASR Service URL</label>
+                                <input type="text" v-model="config.asrUrl" class="input" readonly>
+                            </div>
+                            <div class="setting-item">
+                                <label>Retrieval Service URL</label>
+                                <input type="text" v-model="config.retrievalUrl" class="input" readonly>
+                            </div>
+                            <div class="setting-item">
+                                <label>Admin Service URL</label>
+                                <input type="text" v-model="config.adminUrl" class="input" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>System Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Version:</span>
+                                <span class="info-value">1.0.0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">TTS Engine:</span>
+                                <span class="info-value">Edge-TTS</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Embedding Model:</span>
+                                <span class="info-value">BGE-small-zh-v1.5</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">ASR Model:</span>
+                                <span class="info-value">Whisper Base</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Testing Portal</h3>
+                        <p class="text-muted">Access the development testing portal for advanced debugging and testing.</p>
+                        <a href="http://localhost:8080/web/index.html" target="_blank" class="btn btn-secondary">
+                            Open Testing Portal →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Notification Toast -->
+                <div v-if="notification.show" :class="['notification', notification.type]">
+                    {{ notification.message }}
+                </div>
+            </main>
+        </div>
+
+        <!-- Add/Edit FAQ Modal -->
+        <div v-if="showAddModal || showEditModal" class="modal-overlay" @click.self="closeModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>{{ showEditModal ? 'Edit FAQ' : 'Add New FAQ' }}</h3>
+                    <button @click="closeModal" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Question *</label>
+                        <input v-model="faqForm.question" type="text" class="input" placeholder="Enter the main question">
+                    </div>
+                    <div class="form-group">
+                        <label>Answer *</label>
+                        <textarea v-model="faqForm.answer" class="input" rows="4" placeholder="Enter the answer"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Alternative Questions</label>
+                        <div v-for="(alt, index) in faqForm.alternative_questions" :key="index" class="alt-question-item">
+                            <input v-model="faqForm.alternative_questions[index]" type="text" class="input" placeholder="Alternative question">
+                            <button @click="removeAltQuestion(index)" class="btn-icon danger">✕</button>
+                        </div>
+                        <button @click="addAltQuestion" class="btn btn-secondary btn-sm">+ Add Alternative</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Language *</label>
+                            <select v-model="faqForm.language" class="input">
+                                <option value="auto">Auto Detect</option>
+                                <option value="zh">Chinese</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Category *</label>
+                            <input v-model="faqForm.category" type="text" class="input" placeholder="e.g., hours, services">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeModal" class="btn btn-secondary">Cancel</button>
+                    <button @click="saveFAQ" class="btn btn-primary">
+                        {{ showEditModal ? 'Update' : 'Create' }} FAQ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

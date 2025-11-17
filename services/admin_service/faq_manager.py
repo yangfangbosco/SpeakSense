@@ -18,7 +18,7 @@ class FAQManager:
     def __init__(self):
         pass
 
-    def create_faq(
+    async def create_faq(
         self,
         question: str,
         answer: str,
@@ -61,7 +61,7 @@ class FAQManager:
                 )
             else:
                 # Generate audio using TTS
-                audio_path = tts_generator.generate_audio(
+                audio_path = await tts_generator.generate_audio(
                     text=answer,
                     answer_id=faq_entry.answer_id,
                     language=language if language != 'auto' else None
@@ -100,7 +100,7 @@ class FAQManager:
         faq_entries = db.get_all_faqs()
         return [self._to_faq_response(entry) for entry in faq_entries]
 
-    def update_faq(
+    async def update_faq(
         self,
         answer_id: str,
         updates: Dict
@@ -120,7 +120,7 @@ class FAQManager:
             faq_entry = db.get_faq_by_id(answer_id)
             if faq_entry:
                 try:
-                    audio_path = tts_generator.generate_audio(
+                    audio_path = await tts_generator.generate_audio(
                         text=updates['answer'],
                         answer_id=answer_id,
                         language=updates.get('language', faq_entry.language)
@@ -148,6 +148,63 @@ class FAQManager:
         """
         # Note: Vector database cleanup should be done via rebuild_indices
         return db.delete_faq(answer_id)
+
+    async def regenerate_all_audio(self) -> Dict:
+        """
+        Regenerate audio files for all FAQs
+
+        Returns:
+            Dictionary with regeneration statistics
+        """
+        faqs = db.get_all_faqs()
+
+        if not faqs:
+            return {
+                "status": "completed",
+                "total": 0,
+                "success": 0,
+                "failed": 0,
+                "errors": []
+            }
+
+        success_count = 0
+        failed_count = 0
+        errors = []
+
+        for faq in faqs:
+            try:
+                # Regenerate audio
+                audio_path = await tts_generator.generate_audio(
+                    text=faq.answer,
+                    answer_id=faq.answer_id,
+                    language=faq.language if faq.language != 'auto' else None
+                )
+
+                # Update audio path in database
+                db.update_faq(
+                    answer_id=faq.answer_id,
+                    updates={'audio_path': audio_path}
+                )
+
+                success_count += 1
+                print(f"Regenerated audio for FAQ: {faq.answer_id}")
+
+            except Exception as e:
+                failed_count += 1
+                errors.append({
+                    "answer_id": faq.answer_id,
+                    "question": faq.question,
+                    "error": str(e)
+                })
+                print(f"Failed to regenerate audio for FAQ {faq.answer_id}: {e}")
+
+        return {
+            "status": "completed",
+            "total": len(faqs),
+            "success": success_count,
+            "failed": failed_count,
+            "errors": errors
+        }
 
     def _to_faq_response(self, faq_entry: FAQEntry) -> FAQResponse:
         """Convert FAQEntry to FAQResponse"""

@@ -24,9 +24,19 @@ class EmbeddingModel:
         self._load_model()
 
     def _load_model(self):
-        """Load embedding model"""
-        print(f"Loading embedding model: {self.model_name} on {self.device}...")
-        self.model = SentenceTransformer(self.model_name, device=self.device)
+        """Load embedding model from local directory or download"""
+        # Check for local model first
+        project_root = Path(__file__).parent.parent.parent
+        local_model_path = project_root / "models" / "embedding" / self.model_name.split('/')[-1]
+
+        if local_model_path.exists() and any(local_model_path.iterdir()):
+            print(f"Loading embedding model from local path: {local_model_path}")
+            self.model = SentenceTransformer(str(local_model_path), device=self.device)
+        else:
+            print(f"Loading embedding model: {self.model_name} on {self.device}...")
+            print(f"(To use local model, place files in: {local_model_path})")
+            self.model = SentenceTransformer(self.model_name, device=self.device)
+
         print(f"Embedding model loaded successfully!")
 
     def encode(self, texts: List[str], normalize: bool = True) -> List[List[float]]:

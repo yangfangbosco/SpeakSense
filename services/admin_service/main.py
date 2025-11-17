@@ -65,7 +65,7 @@ async def create_faq(faq: FAQCreate):
         Created FAQ with audio path
     """
     try:
-        result = faq_manager.create_faq(
+        result = await faq_manager.create_faq(
             question=faq.question,
             answer=faq.answer,
             alternative_questions=faq.alternative_questions or [],
@@ -111,7 +111,7 @@ async def create_faq_with_audio(
         if audio_file:
             audio_bytes = await audio_file.read()
 
-        result = faq_manager.create_faq(
+        result = await faq_manager.create_faq(
             question=question,
             answer=answer,
             alternative_questions=alt_questions,
@@ -167,7 +167,7 @@ async def update_faq(answer_id: str, updates: FAQUpdate):
         if not update_dict:
             raise HTTPException(status_code=400, detail="No updates provided")
 
-        result = faq_manager.update_faq(answer_id, update_dict)
+        result = await faq_manager.update_faq(answer_id, update_dict)
 
         if not result:
             raise HTTPException(status_code=404, detail=f"FAQ not found: {answer_id}")
@@ -226,7 +226,7 @@ async def batch_upload_faqs(faqs: List[FAQCreate]):
 
         for idx, faq in enumerate(faqs):
             try:
-                result = faq_manager.create_faq(
+                result = await faq_manager.create_faq(
                     question=faq.question,
                     answer=faq.answer,
                     alternative_questions=faq.alternative_questions or [],
@@ -251,6 +251,19 @@ async def batch_upload_faqs(faqs: List[FAQCreate]):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch upload failed: {str(e)}")
+
+
+@app.post("/admin/regenerate_all_audio")
+async def regenerate_all_audio():
+    """
+    Regenerate audio files for all FAQs
+    Useful when switching TTS models or fixing missing audio files
+    """
+    try:
+        result = await faq_manager.regenerate_all_audio()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Audio regeneration failed: {str(e)}")
 
 
 @app.get("/admin/stats")
