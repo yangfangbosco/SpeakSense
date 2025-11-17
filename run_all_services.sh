@@ -12,6 +12,69 @@ PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Create logs directory
 mkdir -p "$PROJECT_ROOT/logs"
 
+# ========================================
+# Auto-detect Server IP for Portal Configuration
+# ========================================
+
+# Allow manual override: SERVER_IP=192.168.1.100 ./run_all_services.sh
+if [ -z "$SERVER_IP" ]; then
+    # Try to auto-detect the server's IP address
+    # Method 1: Try to get primary network interface IP
+    SERVER_IP=$(ip route get 8.8.8.8 2>/dev/null | grep -oP 'src \K\S+')
+
+    # Method 2: If method 1 fails, try hostname -I
+    if [ -z "$SERVER_IP" ]; then
+        SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+    fi
+
+    # Method 3: If both fail, use localhost
+    if [ -z "$SERVER_IP" ]; then
+        SERVER_IP="localhost"
+    fi
+fi
+
+echo "Detected Server IP: $SERVER_IP"
+echo "Note: Override with: SERVER_IP=your.ip.address ./run_all_services.sh"
+echo ""
+
+# Configure portal URLs
+if [ "$SERVER_IP" != "localhost" ]; then
+    echo "Configuring portals for IP: $SERVER_IP"
+
+    # Backup original files if they don't exist
+    if [ ! -f "$PROJECT_ROOT/portal/assets/js/app.js.original" ]; then
+        cp "$PROJECT_ROOT/portal/assets/js/app.js" "$PROJECT_ROOT/portal/assets/js/app.js.original"
+    fi
+    if [ ! -f "$PROJECT_ROOT/web/index.html.original" ]; then
+        cp "$PROJECT_ROOT/web/index.html" "$PROJECT_ROOT/web/index.html.original"
+    fi
+
+    # Replace localhost with server IP in portal files
+    sed "s|'http://localhost:8001'|'http://$SERVER_IP:8001'|g" \
+        "$PROJECT_ROOT/portal/assets/js/app.js.original" > "$PROJECT_ROOT/portal/assets/js/app.js"
+    sed "s|'http://localhost:8002'|'http://$SERVER_IP:8002'|g" \
+        "$PROJECT_ROOT/portal/assets/js/app.js" > "$PROJECT_ROOT/portal/assets/js/app.js.tmp" && \
+        mv "$PROJECT_ROOT/portal/assets/js/app.js.tmp" "$PROJECT_ROOT/portal/assets/js/app.js"
+    sed "s|'http://localhost:8003'|'http://$SERVER_IP:8003'|g" \
+        "$PROJECT_ROOT/portal/assets/js/app.js" > "$PROJECT_ROOT/portal/assets/js/app.js.tmp" && \
+        mv "$PROJECT_ROOT/portal/assets/js/app.js.tmp" "$PROJECT_ROOT/portal/assets/js/app.js"
+
+    # Same for testing portal
+    sed "s|'http://localhost:8001'|'http://$SERVER_IP:8001'|g" \
+        "$PROJECT_ROOT/web/index.html.original" > "$PROJECT_ROOT/web/index.html"
+    sed "s|'http://localhost:8002'|'http://$SERVER_IP:8002'|g" \
+        "$PROJECT_ROOT/web/index.html" > "$PROJECT_ROOT/web/index.html.tmp" && \
+        mv "$PROJECT_ROOT/web/index.html.tmp" "$PROJECT_ROOT/web/index.html"
+    sed "s|'http://localhost:8003'|'http://$SERVER_IP:8003'|g" \
+        "$PROJECT_ROOT/web/index.html" > "$PROJECT_ROOT/web/index.html.tmp" && \
+        mv "$PROJECT_ROOT/web/index.html.tmp" "$PROJECT_ROOT/web/index.html"
+
+    echo "✓ Portal configuration updated for IP: $SERVER_IP"
+else
+    echo "Using localhost configuration (development mode)"
+fi
+echo ""
+
 # Kill existing processes on these ports (optional)
 echo "Checking for existing processes..."
 lsof -ti:8001 | xargs kill -9 2>/dev/null

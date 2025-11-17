@@ -4,58 +4,48 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
 env/
+venv/
 ENV/
-.venv
+*.egg-info/
+dist/
+build/
 
-# IDE
+# Conda
+speaksense_env/
+*.conda
+
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Data
-data/faq.db
-data/audio_files/*.wav
-data/audio_files/*.mp3
-data/chromadb/
-
 # Logs
-logs/
+logs/*.log
 *.log
+
+# Data directories (runtime data)
+services/admin_service/data/
+services/retrieval_service/data/
+data/audio_files/
+data/chromadb/
+*.db
+*.sqlite3
+
+# Models (large files)
+models/
+
+# Portal configuration backups
+portal/assets/js/app.js.original
+web/index.html.original
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Models (downloaded at runtime)
-models/
-.cache/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Environment variables
-.env
-.env.local
+# Temporary files
+*.tmp
+*.bak
+*.backup
