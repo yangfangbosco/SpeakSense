@@ -17,8 +17,9 @@ jieba==0.42.1  # Chinese word segmentation
 rank-bm25==0.2.2  # BM25 algorithm for keyword search
 
 # ============ Embeddings & Vector Search ============
-transformers==4.36.0  # Required for sentence-transformers (tested and working)
-sentence-transformers>=2.7.0  # For BGE and other embedding models (upgraded for huggingface-hub compatibility)
+# Using stable versions that are tested and compatible
+transformers==4.36.0  # Stable version
+sentence-transformers==2.2.2  # Stable version compatible with transformers 4.36.0
 chromadb==0.4.18  # Vector database
 # Note: ChromaDB will automatically install required dependencies
 
