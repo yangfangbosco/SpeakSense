@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeakSense Admin Portal</title>
     <link rel="stylesheet" href="assets/css/style.css">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="assets/js/vue.global.js"></script>
+    <script src="assets/js/axios.min.js"></script>
 </head>
 <body>
     <div id="app">
@@ -21,8 +21,8 @@
             <!-- Sidebar Navigation -->
             <aside class="sidebar">
                 <div class="sidebar-header">
-                    <h1>🎙️ SpeakSense</h1>
-                    <p class="subtitle">Admin Portal</p>
+                    <h1>🎙️ {{ t('appName') }}</h1>
+                    <p class="subtitle">{{ t('adminPortal') }}</p>
                 </div>
 
                 <nav class="nav-menu">
@@ -32,7 +32,7 @@
                         @click.prevent="currentPage = 'dashboard'"
                     >
                         <span class="icon">📊</span>
-                        <span>Dashboard</span>
+                        <span>{{ t('dashboard') }}</span>
                     </a>
                     <a
                         href="#"
@@ -40,7 +40,15 @@
                         @click.prevent="currentPage = 'faq'"
                     >
                         <span class="icon">📝</span>
-                        <span>FAQ Management</span>
+                        <span>{{ t('faqManagement') }}</span>
+                    </a>
+                    <a
+                        href="#"
+                        :class="['nav-item', { active: currentPage === 'intent' }]"
+                        @click.prevent="currentPage = 'intent'"
+                    >
+                        <span class="icon">🎯</span>
+                        <span>{{ t('intentManagement') }}</span>
                     </a>
                     <a
                         href="#"
@@ -48,7 +56,15 @@
                         @click.prevent="currentPage = 'query'"
                     >
                         <span class="icon">🔍</span>
-                        <span>Query Testing</span>
+                        <span>{{ t('queryTesting') }}</span>
+                    </a>
+                    <a
+                        href="#"
+                        :class="['nav-item', { active: currentPage === 'logs' }]"
+                        @click.prevent="currentPage = 'logs'; loadQueryLogs()"
+                    >
+                        <span class="icon">📋</span>
+                        <span>{{ t('queryLogs') }}</span>
                     </a>
                     <a
                         href="#"
@@ -56,24 +72,24 @@
                         @click.prevent="currentPage = 'settings'"
                     >
                         <span class="icon">⚙️</span>
-                        <span>System Settings</span>
+                        <span>{{ t('systemSettings') }}</span>
                     </a>
                 </nav>
 
                 <div class="sidebar-footer">
                     <div class="service-status">
-                        <h3>Services</h3>
+                        <h3>{{ t('services') }}</h3>
                         <div class="status-item">
                             <span class="status-dot" :class="{ online: services.asr }"></span>
-                            <span>ASR Service</span>
+                            <span>{{ t('asrService') }}</span>
                         </div>
                         <div class="status-item">
                             <span class="status-dot" :class="{ online: services.retrieval }"></span>
-                            <span>Retrieval</span>
+                            <span>{{ t('retrieval') }}</span>
                         </div>
                         <div class="status-item">
                             <span class="status-dot" :class="{ online: services.admin }"></span>
-                            <span>Admin</span>
+                            <span>{{ t('admin') }}</span>
                         </div>
                     </div>
                 </div>
@@ -84,67 +100,86 @@
                 <!-- Dashboard Page -->
                 <div v-if="currentPage === 'dashboard'" class="page">
                     <div class="page-header">
-                        <h2>Dashboard</h2>
-                        <button @click="refreshStats" class="btn btn-secondary">
-                            <span>🔄</span> Refresh
+                        <h2>{{ t('dashboard') }}</h2>
+                        <button @click="refreshDashboard" class="btn btn-secondary">
+                            <span>🔄</span> {{ t('refresh') }}
                         </button>
                     </div>
 
+                    <!-- Key Metrics -->
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-icon">📚</div>
+                            <div class="stat-icon">📊</div>
                             <div class="stat-content">
-                                <div class="stat-value">{{ stats.totalFAQs }}</div>
-                                <div class="stat-label">Total FAQs</div>
+                                <div class="stat-value">{{ dashboardStats.today_queries }}</div>
+                                <div class="stat-label">{{ t('todayQueries') }}</div>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">🔍</div>
+                            <div class="stat-icon">📈</div>
                             <div class="stat-content">
-                                <div class="stat-value">{{ stats.bm25Documents }}</div>
-                                <div class="stat-label">BM25 Documents</div>
+                                <div class="stat-value">{{ dashboardStats.total_queries }}</div>
+                                <div class="stat-label">{{ t('totalQueries') }}</div>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">🧠</div>
+                            <div class="stat-icon">⚡</div>
                             <div class="stat-content">
-                                <div class="stat-value">{{ stats.vectorDocuments }}</div>
-                                <div class="stat-label">Vector Documents</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">🌐</div>
-                            <div class="stat-content">
-                                <div class="stat-value">{{ stats.languages.length }}</div>
-                                <div class="stat-label">Languages</div>
+                                <div class="stat-value">{{ dashboardStats.avg_response_time }} ms</div>
+                                <div class="stat-label">{{ t('avgResponseTime') }}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card">
-                        <h3>Quick Actions</h3>
-                        <div class="actions-grid">
-                            <button @click="rebuildIndices" class="action-btn">
-                                <span class="action-icon">🔨</span>
-                                <span class="action-text">Rebuild Indices</span>
-                            </button>
-                            <button @click="regenerateAllAudio" class="action-btn">
-                                <span class="action-icon">🎵</span>
-                                <span class="action-text">Regenerate Audio</span>
-                            </button>
-                            <button @click="currentPage = 'faq'" class="action-btn">
-                                <span class="action-icon">➕</span>
-                                <span class="action-text">Add New FAQ</span>
-                            </button>
+                    <!-- Top FAQs -->
+                    <div class="card" v-if="dashboardStats.top_faqs && dashboardStats.top_faqs.length > 0">
+                        <h3>🔥 {{ t('topFAQs') }}</h3>
+                        <div class="ranking-list">
+                            <div v-for="(faq, index) in dashboardStats.top_faqs" :key="index" class="ranking-item">
+                                <div class="ranking-number">{{ index + 1 }}</div>
+                                <div class="ranking-content">
+                                    <div class="ranking-text">{{ faq.question }}</div>
+                                    <div class="ranking-count">{{ faq.count }} {{ t('times') }}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="card" v-if="stats.categories.length > 0">
-                        <h3>FAQ Categories</h3>
-                        <div class="categories">
-                            <span v-for="cat in stats.categories" :key="cat" class="category-tag">
-                                {{ cat }}
-                            </span>
+                    <!-- Intent Distribution -->
+                    <div class="card" v-if="dashboardStats.intent_distribution && dashboardStats.intent_distribution.length > 0">
+                        <h3>🎯 {{ t('intentDistribution') }}</h3>
+                        <div class="pie-chart-container">
+                            <div class="pie-chart" :style="{ background: getPieChartGradient() }"></div>
+                            <div class="pie-legend">
+                                <div v-for="(intent, index) in dashboardStats.intent_distribution" :key="index" class="legend-item">
+                                    <div class="legend-color" :style="{ backgroundColor: getPieColor(index) }"></div>
+                                    <div class="legend-content">
+                                        <div class="legend-text">{{ intent.intent_name }}</div>
+                                        <div class="legend-value">{{ getIntentPercentage(intent.count) }}% ({{ intent.count }})</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daily Trend (last 7 days) -->
+                    <div class="card" v-if="dashboardStats.daily_trend && dashboardStats.daily_trend.length > 0">
+                        <h3>📉 {{ t('weeklyTrend') }}</h3>
+                        <div class="trend-chart">
+                            <div v-for="day in dashboardStats.daily_trend" :key="day.date" class="trend-bar">
+                                <div class="trend-bar-fill" :style="{ height: getTrendHeight(day.count) + '%' }"></div>
+                                <div class="trend-label">{{ formatDate(day.date) }}</div>
+                                <div class="trend-value">{{ day.count }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="card" v-if="dashboardStats.total_queries === 0">
+                        <div class="empty-state">
+                            <p class="empty-icon">📭</p>
+                            <p class="empty-text">{{ t('noQueryData') }}</p>
+                            <p class="empty-hint">{{ t('noQueryDataHint') }}</p>
                         </div>
                     </div>
                 </div>
@@ -152,10 +187,15 @@
                 <!-- FAQ Management Page -->
                 <div v-if="currentPage === 'faq'" class="page">
                     <div class="page-header">
-                        <h2>FAQ Management</h2>
-                        <button @click="showAddModal = true" class="btn btn-primary">
-                            <span>➕</span> Add New FAQ
-                        </button>
+                        <h2>{{ t('faqManagement') }}</h2>
+                        <div class="header-actions">
+                            <button @click="rebuildIndices" class="btn btn-secondary">
+                                <span>🔨</span> {{ t('rebuildIndices') }}
+                            </button>
+                            <button @click="showAddModal = true" class="btn btn-primary">
+                                <span>➕</span> {{ t('addNewFAQ') }}
+                            </button>
+                        </div>
                     </div>
 
                     <div class="card">
@@ -163,11 +203,11 @@
                             <input
                                 v-model="searchQuery"
                                 type="text"
-                                placeholder="Search FAQs..."
+                                :placeholder="t('searchFAQs')"
                                 class="search-input"
                             >
                             <button @click="loadFAQs" class="btn btn-secondary">
-                                <span>🔄</span> Refresh
+                                <span>🔄</span> {{ t('refresh') }}
                             </button>
                         </div>
 
@@ -175,12 +215,12 @@
                             <table class="faq-table">
                                 <thead>
                                     <tr>
-                                        <th>Question</th>
-                                        <th>Answer</th>
-                                        <th>Language</th>
-                                        <th>Category</th>
-                                        <th>Audio</th>
-                                        <th>Actions</th>
+                                        <th>{{ t('question') }}</th>
+                                        <th>{{ t('answer') }}</th>
+                                        <th>{{ t('language') }}</th>
+                                        <th>{{ t('category') }}</th>
+                                        <th>{{ t('audio') }}</th>
+                                        <th>{{ t('actions') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -197,10 +237,25 @@
                                         <td><span class="badge">{{ faq.language }}</span></td>
                                         <td><span class="badge badge-secondary">{{ faq.category }}</span></td>
                                         <td>
-                                            <audio v-if="faq.audio_path" controls class="mini-audio">
-                                                <source :src="`/data/${faq.audio_path}`" type="audio/mpeg">
-                                            </audio>
-                                            <span v-else class="text-muted">No audio</span>
+                                            <div class="audio-status-wrapper">
+                                                <!-- Audio Status Badge -->
+                                                <span v-if="faq.audio_status === 'pending'" class="status-badge status-pending">⏳ {{t('audioPending')}}</span>
+                                                <span v-else-if="faq.audio_status === 'generating'" class="status-badge status-generating">🔄 {{t('audioGenerating')}}</span>
+                                                <span v-else-if="faq.audio_status === 'failed'" class="status-badge status-failed">❌ {{t('audioFailed')}}</span>
+
+                                                <!-- Audio Player (only when completed) -->
+                                                <audio v-if="faq.audio_status === 'completed' && faq.audio_path" controls class="mini-audio">
+                                                    <source :src="`/data/${faq.audio_path}`" type="audio/wav">
+                                                </audio>
+
+                                                <!-- Refresh button for pending/generating -->
+                                                <button v-if="faq.audio_status === 'pending' || faq.audio_status === 'generating'"
+                                                        @click="refreshFAQ(faq.answer_id)"
+                                                        class="btn-icon-sm"
+                                                        :title="t('refreshStatus')">
+                                                    🔄
+                                                </button>
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="action-buttons">
@@ -224,17 +279,100 @@
                     </div>
                 </div>
 
-                <!-- Query Testing Page -->
-                <div v-if="currentPage === 'query'" class="page">
+                <!-- Intent Management Page -->
+                <div v-if="currentPage === 'intent'" class="page">
                     <div class="page-header">
-                        <h2>Query Testing</h2>
+                        <h2>{{ t('intentManagement') }}</h2>
+                        <div class="header-actions">
+                            <button @click="rebuildIndices" class="btn btn-secondary">
+                                <span>🔨</span> {{ t('rebuildIndices') }}
+                            </button>
+                            <button @click="showAddIntentModal = true" class="btn btn-primary">
+                                <span>➕</span> {{ t('addNewIntent') }}
+                            </button>
+                        </div>
                     </div>
 
                     <div class="card">
-                        <h3>Test Text Query</h3>
+                        <div class="table-header">
+                            <input
+                                v-model="intentSearchQuery"
+                                type="text"
+                                :placeholder="t('searchIntents')"
+                                class="search-input"
+                            >
+                            <button @click="loadIntents" class="btn btn-secondary">
+                                <span>🔄</span> {{ t('refresh') }}
+                            </button>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="faq-table">
+                                <thead>
+                                    <tr>
+                                        <th>{{ t('intentName') }}</th>
+                                        <th>{{ t('description') }}</th>
+                                        <th>{{ t('triggerPhrases') }}</th>
+                                        <th>{{ t('actionType') }}</th>
+                                        <th>{{ t('language') }}</th>
+                                        <th>{{ t('category') }}</th>
+                                        <th>{{ t('actions') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="intent in filteredIntents" :key="intent.intent_id">
+                                        <td>
+                                            <div class="intent-name">{{ intent.intent_name }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="intent-desc">{{ truncate(intent.description, 50) }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="trigger-phrases">
+                                                <span v-for="(phrase, idx) in intent.trigger_phrases.slice(0, 2)" :key="idx" class="phrase-tag">
+                                                    {{ phrase }}
+                                                </span>
+                                                <span v-if="intent.trigger_phrases.length > 2" class="text-muted">
+                                                    +{{ intent.trigger_phrases.length - 2 }} more
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge">{{ intent.action_type }}</span></td>
+                                        <td><span class="badge">{{ intent.language }}</span></td>
+                                        <td><span class="badge badge-secondary">{{ intent.category }}</span></td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button @click="editIntent(intent)" class="btn-icon" title="Edit">
+                                                    ✏️
+                                                </button>
+                                                <button @click="deleteIntent(intent)" class="btn-icon danger" title="Delete">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="filteredIntents.length === 0">
+                                        <td colspan="7" class="text-center text-muted">
+                                            No intents found
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query Testing Page -->
+                <div v-if="currentPage === 'query'" class="page">
+                    <div class="page-header">
+                        <h2>{{ t('queryTesting') }}</h2>
+                    </div>
+
+                    <div class="card">
+                        <h3>{{ t('testTextQuery') }}</h3>
                         <div class="query-form">
                             <div class="form-group">
-                                <label>Enter Your Question</label>
+                                <label>{{ t('enterYourQuestion') }}</label>
                                 <input
                                     v-model="queryForm.text"
                                     type="text"
@@ -245,69 +383,176 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Language</label>
+                                    <label>{{ t('language') }}</label>
                                     <select v-model="queryForm.language" class="input">
-                                        <option value="auto">Auto Detect</option>
-                                        <option value="zh">Chinese</option>
-                                        <option value="en">English</option>
+                                        <option value="auto">{{ t('autoDetect') }}</option>
+                                        <option value="zh">{{ t('chinese') }}</option>
+                                        <option value="en">{{ t('english') }}</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Search Method</label>
+                                    <label>{{ t('searchMethod') }}</label>
                                     <select v-model="queryForm.method" class="input">
-                                        <option value="hybrid">Hybrid (BM25 + Vector)</option>
-                                        <option value="bm25">BM25 Only</option>
-                                        <option value="vector">Vector Only</option>
+                                        <option value="hybrid">{{ t('hybrid') }}</option>
+                                        <option value="bm25">{{ t('bm25Only') }}</option>
+                                        <option value="vector">{{ t('vectorOnly') }}</option>
                                     </select>
                                 </div>
                             </div>
                             <button @click="testQuery" class="btn btn-primary" :disabled="!queryForm.text">
-                                <span>🔍</span> Search
+                                <span>🔍</span> {{ t('search') }}
                             </button>
                         </div>
 
                         <div v-if="queryResult" class="query-result">
-                            <div v-if="queryResult.success" class="result-card success">
+                            <!-- Intent Result -->
+                            <div v-if="queryResult.success && queryResult.data.type === 'intent'" class="result-card success intent-result">
                                 <div class="result-header">
-                                    <h4>✓ Match Found</h4>
+                                    <h4>🎯 {{ t('intentMatched') }}</h4>
                                     <span class="confidence-badge">
-                                        {{ (queryResult.data.confidence * 100).toFixed(1) }}% confidence
+                                        {{ (queryResult.data.confidence * 100).toFixed(1) }}% {{ t('confidence') }}
                                     </span>
                                 </div>
                                 <div class="result-body">
                                     <div class="result-item">
-                                        <strong>Question:</strong>
-                                        <p>{{ queryResult.data.question }}</p>
+                                        <strong>{{ t('intentName') }}:</strong>
+                                        <p class="intent-name">{{ queryResult.data.intent_name }}</p>
                                     </div>
                                     <div class="result-item">
-                                        <strong>Answer:</strong>
-                                        <p>{{ queryResult.data.answer }}</p>
+                                        <strong>{{ t('description') }}:</strong>
+                                        <p>{{ queryResult.data.description }}</p>
                                     </div>
                                     <div class="result-item">
-                                        <strong>Matched By:</strong>
-                                        <span class="badge">{{ queryResult.data.matched_by }}</span>
+                                        <strong>{{ t('matchedPhrase') }}:</strong>
+                                        <p class="phrase-tag">{{ queryResult.data.matched_phrase }}</p>
+                                    </div>
+                                    <div v-if="queryResult.data.parameters && Object.keys(queryResult.data.parameters).length > 0" class="result-item">
+                                        <strong>{{ t('extractedParameters') }}:</strong>
+                                        <div class="parameters-display">
+                                            <div v-for="(value, key) in queryResult.data.parameters" :key="key" class="parameter-item">
+                                                <span class="param-key">{{ key }}</span>
+                                                <span class="param-arrow">→</span>
+                                                <span class="param-value">{{ value }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="result-item">
-                                        <strong>Audio Response:</strong>
-                                        <audio v-if="queryResult.data.audio_path" controls class="audio-player">
-                                            <source :src="`/data/${queryResult.data.audio_path}`" type="audio/mpeg">
-                                        </audio>
-                                        <span v-else class="text-muted">No audio available</span>
+                                        <strong>{{ t('actionType') }}:</strong>
+                                        <span class="badge">{{ queryResult.data.action_type }}</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('actionConfiguration') }}:</strong>
+                                        <pre class="code-display">{{ JSON.stringify(queryResult.data.action_config, null, 2) }}</pre>
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- FAQ Result -->
+                            <div v-else-if="queryResult.success && queryResult.data.type === 'faq'" class="result-card success faq-result">
+                                <div class="result-header">
+                                    <h4>✓ {{ t('faqMatchFound') }}</h4>
+                                    <span class="confidence-badge">
+                                        {{ (queryResult.data.confidence * 100).toFixed(1) }}% {{ t('confidence') }}
+                                    </span>
+                                </div>
+                                <div class="result-body">
+                                    <div class="result-item">
+                                        <strong>{{ t('question') }}:</strong>
+                                        <p>{{ queryResult.data.question }}</p>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('answer') }}:</strong>
+                                        <p>{{ queryResult.data.answer }}</p>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('matchedBy') }}:</strong>
+                                        <span class="badge">{{ queryResult.data.matched_by }}</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('audioResponse') }}:</strong>
+                                        <audio v-if="queryResult.data.audio_path" controls class="audio-player">
+                                            <source :src="`/data/${queryResult.data.audio_path}`" type="audio/mpeg">
+                                        </audio>
+                                        <span v-else class="text-muted">{{ t('noAudioAvailable') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Legacy result (no type specified) -->
+                            <div v-else-if="queryResult.success" class="result-card success">
+                                <div class="result-header">
+                                    <h4>✓ {{ t('matchFound') }}</h4>
+                                    <span class="confidence-badge">
+                                        {{ (queryResult.data.confidence * 100).toFixed(1) }}% {{ t('confidence') }}
+                                    </span>
+                                </div>
+                                <div class="result-body">
+                                    <div class="result-item">
+                                        <strong>{{ t('question') }}:</strong>
+                                        <p>{{ queryResult.data.question }}</p>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('answer') }}:</strong>
+                                        <p>{{ queryResult.data.answer }}</p>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('matchedBy') }}:</strong>
+                                        <span class="badge">{{ queryResult.data.matched_by }}</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <strong>{{ t('audioResponse') }}:</strong>
+                                        <audio v-if="queryResult.data.audio_path" controls class="audio-player">
+                                            <source :src="`/data/${queryResult.data.audio_path}`" type="audio/mpeg">
+                                        </audio>
+                                        <span v-else class="text-muted">{{ t('noAudioAvailable') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- No Match -->
                             <div v-else class="result-card error">
-                                <h4>✗ No Match Found</h4>
+                                <h4>✗ {{ t('noMatchFound') }}</h4>
                                 <p>{{ queryResult.message }}</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h3>Test Audio Query (ASR)</h3>
+                        <h3>{{ t('testAudioQuery') }}</h3>
                         <div class="asr-form">
                             <div class="form-group">
-                                <label>Upload Audio File</label>
+                                <label>{{ t('recordWithMicrophone') }}</label>
+                                <div class="recording-controls">
+                                    <button
+                                        v-if="!recording.isRecording"
+                                        @click="startRecording"
+                                        class="btn btn-record"
+                                    >
+                                        <span>🎤</span> {{ t('startRecording') }}
+                                    </button>
+                                    <button
+                                        v-else
+                                        @click="stopRecording"
+                                        class="btn btn-stop"
+                                    >
+                                        <span>⏹</span> {{ t('stopRecording') }}
+                                    </button>
+                                    <span v-if="recording.isRecording" class="recording-indicator">
+                                        <span class="pulse-dot"></span>
+                                        {{ t('recording') }} {{ recording.duration }}s
+                                    </span>
+                                </div>
+                                <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+                                    {{ t('microphoneNote') }}
+                                </p>
+                            </div>
+
+                            <div class="form-divider">
+                                <span>{{ t('or') }}</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label>{{ t('uploadAudioFile') }}</label>
                                 <input
                                     type="file"
                                     @change="handleAudioFile"
@@ -315,6 +560,7 @@
                                     class="file-input"
                                 >
                             </div>
+
                             <div class="form-group">
                                 <label>Language</label>
                                 <select v-model="asrForm.language" class="input">
@@ -342,57 +588,199 @@
                     </div>
                 </div>
 
+                <!-- Query Logs Page -->
+                <div v-if="currentPage === 'logs'" class="page">
+                    <div class="page-header">
+                        <h2>{{ t('queryLogs') }}</h2>
+                        <div class="header-actions">
+                            <select v-model="logFilter" @change="loadQueryLogs" class="input" style="width: 180px;">
+                                <option value="all">{{ t('allTypes') }}</option>
+                                <option value="faq">{{ t('faqOnly') }}</option>
+                                <option value="intent">{{ t('intentOnly') }}</option>
+                                <option value="none">{{ t('noMatchOnly') }}</option>
+                            </select>
+                            <button @click="loadQueryLogs" class="btn btn-secondary">
+                                <span>🔄</span> {{ t('refresh') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Query Logs Table -->
+                    <div class="card">
+                        <div v-if="queryLogs.length === 0" class="empty-state">
+                            <div class="empty-icon">📋</div>
+                            <div class="empty-text">{{ t('noLogsFound') }}</div>
+                            <div class="empty-hint">{{ t('noLogsHint') }}</div>
+                        </div>
+
+                        <div v-else class="table-container">
+                            <table class="faq-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 180px;">{{ t('timestamp') }}</th>
+                                        <th>{{ t('queryText') }}</th>
+                                        <th style="width: 100px;">{{ t('matchType') }}</th>
+                                        <th>{{ t('matchedQuestion') }}</th>
+                                        <th style="width: 100px;">{{ t('confidence') }}</th>
+                                        <th style="width: 100px;">{{ t('responseTime') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="log in queryLogs" :key="log.log_id">
+                                        <td>
+                                            <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                                                {{ formatTimestamp(log.created_at) }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="faq-question">{{ log.query_text }}</div>
+                                        </td>
+                                        <td>
+                                            <span
+                                                class="badge"
+                                                :style="getMatchTypeBadgeStyle(log.matched_type)"
+                                            >
+                                                {{ getMatchTypeLabel(log.matched_type) }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="faq-answer" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                {{ log.matched_question || '-' }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span v-if="log.confidence !== null" :style="{
+                                                color: log.confidence >= 0.7 ? 'var(--success-color)' :
+                                                       log.confidence >= 0.5 ? 'var(--warning-color)' :
+                                                       'var(--danger-color)',
+                                                fontWeight: '600'
+                                            }">
+                                                {{ (log.confidence * 100).toFixed(1) }}%
+                                            </span>
+                                            <span v-else style="color: var(--text-muted);">-</span>
+                                        </td>
+                                        <td>
+                                            <span v-if="log.response_time !== null" style="color: var(--text-secondary);">
+                                                {{ log.response_time.toFixed(0) }}ms
+                                            </span>
+                                            <span v-else style="color: var(--text-muted);">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div v-if="queryLogs.length > 0" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; align-items: center;">
+                            <button
+                                @click="loadPreviousLogs"
+                                :disabled="logOffset === 0"
+                                class="btn btn-secondary btn-sm"
+                            >
+                                ← {{ t('previous') }}
+                            </button>
+                            <span style="color: var(--text-muted); font-size: 0.875rem;">
+                                {{ t('showing') }} {{ logOffset + 1 }}-{{ logOffset + queryLogs.length }}
+                            </span>
+                            <button
+                                @click="loadNextLogs"
+                                :disabled="queryLogs.length < logLimit"
+                                class="btn btn-secondary btn-sm"
+                            >
+                                {{ t('next') }} →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- System Settings Page -->
                 <div v-if="currentPage === 'settings'" class="page">
                     <div class="page-header">
-                        <h2>System Settings</h2>
+                        <h2>{{ t('systemSettings') }}</h2>
                     </div>
 
                     <div class="card">
-                        <h3>Service Configuration</h3>
+                        <h3>{{ t('serviceConfiguration') }}</h3>
                         <div class="settings-grid">
                             <div class="setting-item">
-                                <label>ASR Service URL</label>
+                                <label>{{ t('asrServiceURL') }}</label>
                                 <input type="text" v-model="config.asrUrl" class="input" readonly>
                             </div>
                             <div class="setting-item">
-                                <label>Retrieval Service URL</label>
+                                <label>{{ t('retrievalServiceURL') }}</label>
                                 <input type="text" v-model="config.retrievalUrl" class="input" readonly>
                             </div>
                             <div class="setting-item">
-                                <label>Admin Service URL</label>
+                                <label>{{ t('adminServiceURL') }}</label>
                                 <input type="text" v-model="config.adminUrl" class="input" readonly>
                             </div>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h3>System Information</h3>
+                        <h3>{{ t('languagePreference') }}</h3>
+                        <p class="text-muted">{{ t('languagePreferenceDesc') }}</p>
+                        <div class="language-options">
+                            <button
+                                @click="changeLanguage('zh')"
+                                :class="['lang-option-btn', { active: currentLanguage === 'zh' }]"
+                            >
+                                <span class="lang-icon">🇨🇳</span>
+                                <div class="lang-info">
+                                    <div class="lang-name">简体中文</div>
+                                    <div class="lang-subtitle">Simplified Chinese</div>
+                                </div>
+                                <span v-if="currentLanguage === 'zh'" class="check-icon">✓</span>
+                            </button>
+                            <button
+                                @click="changeLanguage('en')"
+                                :class="['lang-option-btn', { active: currentLanguage === 'en' }]"
+                            >
+                                <span class="lang-icon">🇺🇸</span>
+                                <div class="lang-info">
+                                    <div class="lang-name">English</div>
+                                    <div class="lang-subtitle">English (United States)</div>
+                                </div>
+                                <span v-if="currentLanguage === 'en'" class="check-icon">✓</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>{{ t('systemInformation') }}</h3>
                         <div class="info-grid">
                             <div class="info-item">
-                                <span class="info-label">Version:</span>
+                                <span class="info-label">{{ t('version') }}:</span>
                                 <span class="info-value">1.0.0</span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">TTS Engine:</span>
+                                <span class="info-label">{{ t('ttsEngine') }}:</span>
                                 <span class="info-value">Edge-TTS</span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">Embedding Model:</span>
+                                <span class="info-label">{{ t('embeddingModel') }}:</span>
                                 <span class="info-value">BGE-small-zh-v1.5</span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">ASR Model:</span>
+                                <span class="info-label">{{ t('asrModel') }}:</span>
                                 <span class="info-value">Whisper Base</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h3>Testing Portal</h3>
-                        <p class="text-muted">Access the development testing portal for advanced debugging and testing.</p>
+                        <h3>{{ t('audioManagement') }}</h3>
+                        <p class="text-muted">{{ t('audioManagementDesc') }}</p>
+                        <button @click="regenerateAllAudio" class="btn btn-primary" :disabled="loading">
+                            <span>🎵</span> {{ t('regenerateAllAudio') }}
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <h3>{{ t('testingPortal') }}</h3>
+                        <p class="text-muted">{{ t('testingPortalDesc') }}</p>
                         <a href="http://localhost:8080/web/index.html" target="_blank" class="btn btn-secondary">
-                            Open Testing Portal →
+                            {{ t('openTestingPortal') }}
                         </a>
                     </div>
                 </div>
@@ -408,45 +796,120 @@
         <div v-if="showAddModal || showEditModal" class="modal-overlay" @click.self="closeModal">
             <div class="modal">
                 <div class="modal-header">
-                    <h3>{{ showEditModal ? 'Edit FAQ' : 'Add New FAQ' }}</h3>
+                    <h3>{{ showEditModal ? t('editFAQ') : t('addNewFAQ') }}</h3>
                     <button @click="closeModal" class="close-btn">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Question *</label>
-                        <input v-model="faqForm.question" type="text" class="input" placeholder="Enter the main question">
+                        <label>{{ t('questionRequired') }}</label>
+                        <input v-model="faqForm.question" type="text" class="input" :placeholder="t('questionPlaceholder')">
                     </div>
                     <div class="form-group">
-                        <label>Answer *</label>
-                        <textarea v-model="faqForm.answer" class="input" rows="4" placeholder="Enter the answer"></textarea>
+                        <label>{{ t('answerRequired') }}</label>
+                        <textarea v-model="faqForm.answer" class="input" rows="4" :placeholder="t('answerPlaceholder')"></textarea>
+                        <button
+                            @click="previewAudio"
+                            class="btn btn-secondary btn-sm"
+                            style="margin-top: 0.5rem;"
+                            :disabled="!faqForm.answer || previewingAudio"
+                        >
+                            <span>{{ previewingAudio ? '⏳' : '🔊' }}</span> {{ t('previewAudio') }}
+                        </button>
+                        <audio v-if="previewAudioUrl" :key="audioKey" id="preview-audio-player" controls style="width: 100%; margin-top: 0.5rem;">
+                            <source :src="previewAudioUrl" type="audio/wav">
+                        </audio>
                     </div>
                     <div class="form-group">
-                        <label>Alternative Questions</label>
+                        <label>{{ t('alternativeQuestions') }}</label>
                         <div v-for="(alt, index) in faqForm.alternative_questions" :key="index" class="alt-question-item">
-                            <input v-model="faqForm.alternative_questions[index]" type="text" class="input" placeholder="Alternative question">
+                            <input v-model="faqForm.alternative_questions[index]" type="text" class="input" :placeholder="t('alternativeQuestionPlaceholder')">
                             <button @click="removeAltQuestion(index)" class="btn-icon danger">✕</button>
                         </div>
-                        <button @click="addAltQuestion" class="btn btn-secondary btn-sm">+ Add Alternative</button>
+                        <button @click="addAltQuestion" class="btn btn-secondary btn-sm">{{ t('addAlternative') }}</button>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Language *</label>
+                            <label>{{ t('languageRequired') }}</label>
                             <select v-model="faqForm.language" class="input">
-                                <option value="auto">Auto Detect</option>
-                                <option value="zh">Chinese</option>
-                                <option value="en">English</option>
+                                <option value="auto">{{ t('autoDetect') }}</option>
+                                <option value="zh">{{ t('chinese') }}</option>
+                                <option value="en">{{ t('english') }}</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Category *</label>
-                            <input v-model="faqForm.category" type="text" class="input" placeholder="e.g., hours, services">
+                            <label>{{ t('categoryRequired') }}</label>
+                            <input v-model="faqForm.category" type="text" class="input" :placeholder="t('categoryPlaceholder')">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button @click="closeModal" class="btn btn-secondary">Cancel</button>
+                    <button @click="closeModal" class="btn btn-secondary">{{ t('cancel') }}</button>
                     <button @click="saveFAQ" class="btn btn-primary">
-                        {{ showEditModal ? 'Update' : 'Create' }} FAQ
+                        {{ showEditModal ? t('update') : t('create') }} FAQ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Intent Modal -->
+        <div v-if="showAddIntentModal || showEditIntentModal" class="modal-overlay" @click.self="closeIntentModal">
+            <div class="modal modal-large">
+                <div class="modal-header">
+                    <h3>{{ showEditIntentModal ? t('editIntent') : t('addNewIntent') }}</h3>
+                    <button @click="closeIntentModal" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>{{ t('intentNameRequired') }}</label>
+                        <input v-model="intentForm.intent_name" type="text" class="input" :placeholder="t('intentNamePlaceholder')">
+                        <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">{{ t('intentNameHint') }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ t('descriptionRequired') }}</label>
+                        <textarea v-model="intentForm.description" class="input" rows="2" :placeholder="t('descriptionPlaceholder')"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ t('triggerPhrasesRequired') }}</label>
+                        <div v-for="(phrase, index) in intentForm.trigger_phrases" :key="index" class="alt-question-item">
+                            <input v-model="intentForm.trigger_phrases[index]" type="text" class="input" :placeholder="t('triggerPhrasePlaceholder')">
+                            <button @click="removeTriggerPhrase(index)" class="btn-icon danger">✕</button>
+                        </div>
+                        <button @click="addTriggerPhrase" class="btn btn-secondary btn-sm">{{ t('addTriggerPhrase') }}</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>{{ t('actionTypeRequired') }}</label>
+                            <select v-model="intentForm.action_type" class="input">
+                                <option value="open_app">{{ t('openApp') }}</option>
+                                <option value="api_call">{{ t('apiCall') }}</option>
+                                <option value="navigate">{{ t('navigate') }}</option>
+                                <option value="function">{{ t('executeFunction') }}</option>
+                                <option value="custom">{{ t('custom') }}</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ t('languageRequired') }}</label>
+                            <select v-model="intentForm.language" class="input">
+                                <option value="auto">{{ t('autoDetect') }}</option>
+                                <option value="zh">{{ t('chinese') }}</option>
+                                <option value="en">{{ t('english') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ t('categoryRequired') }}</label>
+                        <input v-model="intentForm.category" type="text" class="input" :placeholder="t('categoryPlaceholderIntent')">
+                    </div>
+                    <div class="form-group">
+                        <label>{{ t('actionConfigRequired') }}</label>
+                        <textarea v-model="actionConfigJson" class="input code-input" rows="6" :placeholder="t('actionConfigPlaceholder')"></textarea>
+                        <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem;">{{ t('actionConfigHint') }}</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeIntentModal" class="btn btn-secondary">{{ t('cancel') }}</button>
+                    <button @click="saveIntent" class="btn btn-primary">
+                        {{ showEditIntentModal ? t('update') : t('create') }} {{ t('intent') }}
                     </button>
                 </div>
             </div>

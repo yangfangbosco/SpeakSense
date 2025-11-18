@@ -17,12 +17,19 @@ jieba==0.42.1  # Chinese word segmentation
 rank-bm25==0.2.2  # BM25 algorithm for keyword search
 
 # ============ Embeddings & Vector Search ============
-sentence-transformers==2.2.2  # For BGE and other embedding models
+sentence-transformers>=2.7.0  # For BGE and other embedding models (upgraded for huggingface-hub compatibility)
 chromadb==0.4.18  # Vector database
 # Note: ChromaDB will automatically install required dependencies
 
 # ============ TTS (Text-to-Speech) ============
-# PaddleSpeech (Chinese + English TTS)
+# MeloTTS (Local Chinese + English TTS, no internet required)
+# Install with: pip install git+https://github.com/myshell-ai/MeloTTS.git
+# Dependencies for MeloTTS:
+unidic-lite  # Japanese dictionary for MeloTTS (required dependency)
+
+# PaddleSpeech (Chinese + English TTS) - OPTIONAL
+# Note: If using MeloTTS only, you can skip PaddleSpeech installation
+# Comment out the following lines if not needed:
 paddlepaddle==2.6.2  # CPU version (updated for compatibility)
 # For GPU: paddlepaddle-gpu==2.6.2
 paddlespeech==1.4.1
@@ -31,7 +38,7 @@ paddlespeech==1.4.1
 edge-tts==6.1.9  # Microsoft Edge TTS (optional)
 
 # ============ Audio Processing ============
-librosa==0.10.1  # Audio processing utilities
+librosa==0.8.1  # Audio processing utilities (pinned for PaddleSpeech compatibility)
 soundfile==0.12.1  # Audio file I/O
 pydub==0.25.1  # Audio manipulation
 
@@ -41,8 +48,8 @@ pydub==0.25.1  # Audio manipulation
 # ============ Utilities ============
 requests==2.31.0
 numpy==1.24.3  # Pin version for compatibility
-torch==2.1.0  # For Whisper and embeddings (CPU version)
-# For GPU: torch==2.1.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+torch==2.2.2  # For Whisper, embeddings, and MeloTTS (CPU version)
+# For GPU: torch==2.2.2+cu118 -f https://download.pytorch.org/whl/torch_stable.html
 
 # ============ Development & Testing ============
 pytest==7.4.3

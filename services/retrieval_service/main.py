@@ -78,12 +78,43 @@ async def search_faq(request: RetrievalRequest):
     Returns:
         List of matching FAQs with answers and audio paths
     """
+    import time
+    from shared.database import db
+
+    start_time = time.time()
+
     try:
         results = retrieval.search(
             query=request.query,
             top_k=request.top_k or 1,
             language=request.language
         )
+
+        response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+
+        # Log query
+        if results:
+            first_result = results[0]
+            matched_type = first_result.get('type', 'faq')
+            matched_id = first_result.get('intent_id' if matched_type == 'intent' else 'answer_id')
+            matched_question = first_result.get('intent_name' if matched_type == 'intent' else 'question')
+            confidence = first_result.get('confidence', first_result.get('score', 0.0))
+
+            db.create_query_log(
+                query_text=request.query,
+                matched_type=matched_type,
+                matched_id=matched_id,
+                matched_question=matched_question,
+                confidence=confidence,
+                response_time=response_time
+            )
+        else:
+            # No match found
+            db.create_query_log(
+                query_text=request.query,
+                matched_type='none',
+                response_time=response_time
+            )
 
         if not results:
             return []
@@ -104,34 +135,59 @@ async def search_faq(request: RetrievalRequest):
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
-@app.post("/retrieval/best_answer", response_model=RetrievalResponse)
+@app.post("/retrieval/best_answer")
 async def get_best_answer(request: RetrievalRequest):
     """
     Get the best matching answer for a query
+    Returns either an Intent or FAQ result based on what matches
 
     Args:
         request: RetrievalRequest with query
 
     Returns:
-        Best matching FAQ with answer and audio path
+        Best matching result (Intent or FAQ) with metadata
     """
+    import time
+    from shared.database import db
+
+    start_time = time.time()
+
     try:
         result = retrieval.get_best_answer(
             query=request.query,
             language=request.language
         )
 
-        if not result:
-            raise HTTPException(status_code=404, detail="No matching FAQ found")
+        response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
 
-        return RetrievalResponse(
-            answer_id=result['answer_id'],
-            question=result['question'],
-            answer=result['answer'],
-            audio_path=result['audio_path'],
-            confidence=result.get('confidence', result.get('score', 0.0)),
-            matched_by=result.get('matched_by', 'hybrid')
+        if not result:
+            # No match found
+            db.create_query_log(
+                query_text=request.query,
+                matched_type='none',
+                response_time=response_time
+            )
+            raise HTTPException(status_code=404, detail="No matching result found")
+
+        # Log query
+        matched_type = result.get('type', 'faq')
+        matched_id = result.get('intent_id' if matched_type == 'intent' else 'answer_id')
+        matched_question = result.get('intent_name' if matched_type == 'intent' else 'question')
+        confidence = result.get('confidence', result.get('score', 0.0))
+
+        db.create_query_log(
+            query_text=request.query,
+            matched_type=matched_type,
+            matched_id=matched_id,
+            matched_question=matched_question,
+            confidence=confidence,
+            response_time=response_time
         )
+
+        # Return result as-is (works for both intents and FAQs)
+        # Intent results have: type='intent', intent_id, intent_name, action_type, action_config, etc.
+        # FAQ results have: type='faq', answer_id, question, answer, audio_path, matched_by, etc.
+        return result
 
     except HTTPException:
         raise

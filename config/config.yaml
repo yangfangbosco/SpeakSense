@@ -17,7 +17,7 @@ embedding:
 
 # TTS Configuration
 tts:
-  model_type: "edge-tts"  # Using edge-tts (M2 compatible, requires internet)
+  model_type: "melo-tts"  # Using MeloTTS (local, no internet required, supports ZH+EN)
   language: "auto"  # auto, zh, en
   speed: 1.0
   volume: 1.0
@@ -43,7 +43,7 @@ retrieval:
 admin:
   port: 8003
   audio_output_dir: "./data/audio_files"
-  audio_format: "mp3"  # wav, mp3 (Edge-TTS generates MP3 format)
+  audio_format: "wav"  # wav, mp3 (MeloTTS generates WAV format)
 
 # Database Configuration
 database:

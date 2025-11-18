@@ -2,6 +2,11 @@
 Vector Search for SpeakSense
 Semantic search using embeddings and ChromaDB
 """
+import os
+# Set offline mode for transformers to prevent downloading from HuggingFace
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+os.environ['HF_HUB_OFFLINE'] = '1'
+
 import chromadb
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
@@ -12,6 +17,7 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from shared.config_loader import config
 from shared.database import db
+from services.retrieval_service.parameter_extraction import parameter_extractor
 
 
 class EmbeddingModel:
@@ -132,7 +138,7 @@ class VectorSearch:
         all_questions = [question] + alternative_questions
 
         # Generate IDs for each question variant
-        ids = [f"{answer_id}_main"] + [f"{answer_id}_alt_{i}" for i in range(len(alternative_questions))]
+        ids = [f"faq_{answer_id}_main"] + [f"faq_{answer_id}_alt_{i}" for i in range(len(alternative_questions))]
 
         # Encode questions
         embeddings = self.embedding_model.encode(all_questions)
@@ -141,6 +147,7 @@ class VectorSearch:
         metadatas = []
         for i, q in enumerate(all_questions):
             meta = {
+                'type': 'faq',
                 'answer_id': answer_id,
                 'question': q,
                 'is_alternative': i > 0
@@ -157,16 +164,58 @@ class VectorSearch:
             metadatas=metadatas
         )
 
+    def add_intent(self, intent_id: str, intent_name: str, trigger_phrases: List[str],
+                   action_type: str, action_config: Dict, metadata: Dict = None):
+        """
+        Add Intent to vector database
+
+        Args:
+            intent_id: Unique intent ID
+            intent_name: Intent name
+            trigger_phrases: List of trigger phrases
+            action_type: Type of action
+            action_config: Action configuration
+            metadata: Additional metadata
+        """
+        # Generate IDs for each trigger phrase
+        ids = [f"intent_{intent_id}_phrase_{i}" for i in range(len(trigger_phrases))]
+
+        # Encode trigger phrases
+        embeddings = self.embedding_model.encode(trigger_phrases)
+
+        # Prepare metadata
+        metadatas = []
+        for i, phrase in enumerate(trigger_phrases):
+            meta = {
+                'type': 'intent',
+                'intent_id': intent_id,
+                'intent_name': intent_name,
+                'trigger_phrase': phrase,
+                'action_type': action_type,
+                'action_config': str(action_config)  # Store as string for ChromaDB
+            }
+            if metadata:
+                meta.update(metadata)
+            metadatas.append(meta)
+
+        # Add to collection
+        self.collection.add(
+            ids=ids,
+            embeddings=embeddings,
+            documents=trigger_phrases,
+            metadatas=metadatas
+        )
+
     def search(self, query: str, top_k: int = 10) -> List[Dict]:
         """
-        Search similar FAQs using vector similarity
+        Search similar FAQs and Intents using vector similarity
 
         Args:
             query: Query text
             top_k: Number of top results
 
         Returns:
-            List of search results with scores
+            List of search results with scores (FAQs and Intents)
         """
         # Encode query
         query_embedding = self.embedding_model.encode([query])[0]
@@ -174,57 +223,102 @@ class VectorSearch:
         # Search in ChromaDB
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k
+            n_results=top_k * 2  # Get more results to handle deduplication
         )
 
         # Process results
         search_results = []
-        seen_answer_ids = set()
+        seen_ids = set()  # Track both answer_ids and intent_ids
 
         if results['ids'] and len(results['ids']) > 0:
             for i, doc_id in enumerate(results['ids'][0]):
                 metadata = results['metadatas'][0][i]
                 distance = results['distances'][0][i]
-                answer_id = metadata['answer_id']
+                doc_type = metadata.get('type', 'faq')
 
                 # Convert distance to similarity score (for cosine distance)
                 # ChromaDB returns distance, we want similarity (1 - distance)
                 similarity = 1 - distance
 
-                # Deduplicate by answer_id (keep highest score)
-                if answer_id not in seen_answer_ids:
-                    seen_answer_ids.add(answer_id)
+                if doc_type == 'faq':
+                    # FAQ result
+                    answer_id = metadata['answer_id']
 
-                    # Get full FAQ from database
-                    faq = db.get_faq_by_id(answer_id)
+                    # Deduplicate by answer_id (keep highest score)
+                    if answer_id not in seen_ids:
+                        seen_ids.add(answer_id)
 
-                    if faq:
-                        search_results.append({
-                            'answer_id': answer_id,
-                            'question': faq.question,
-                            'answer': faq.answer,
-                            'audio_path': faq.audio_path,
-                            'language': faq.language,
-                            'score': float(similarity),
-                            'matched_question': metadata['question'],
-                            'is_alternative': metadata.get('is_alternative', False)
-                        })
+                        # Get full FAQ from database
+                        faq = db.get_faq_by_id(answer_id)
 
-        return search_results
+                        if faq:
+                            search_results.append({
+                                'type': 'faq',
+                                'answer_id': answer_id,
+                                'question': faq.question,
+                                'answer': faq.answer,
+                                'audio_path': faq.audio_path,
+                                'language': faq.language,
+                                'score': float(similarity),
+                                'matched_question': metadata['question'],
+                                'is_alternative': metadata.get('is_alternative', False)
+                            })
+
+                elif doc_type == 'intent':
+                    # Intent result
+                    intent_id = metadata['intent_id']
+
+                    # Deduplicate by intent_id (keep highest score)
+                    if intent_id not in seen_ids:
+                        seen_ids.add(intent_id)
+
+                        # Get full intent from database
+                        intent = db.get_intent_by_id(intent_id)
+
+                        if intent:
+                            # Extract parameters from query using all trigger phrases
+                            matched, phrase, parameters = parameter_extractor.match_and_extract(
+                                query, intent.trigger_phrases
+                            )
+                            matched_phrase = phrase if matched else metadata['trigger_phrase']
+
+                            search_results.append({
+                                'type': 'intent',
+                                'intent_id': intent_id,
+                                'intent_name': intent.intent_name,
+                                'description': intent.description,
+                                'matched_phrase': matched_phrase,
+                                'action_type': intent.action_type,
+                                'action_config': intent.action_config,
+                                'language': intent.language,
+                                'category': intent.category,
+                                'score': float(similarity),
+                                'parameters': parameters  # Extracted parameters
+                            })
+
+        # Return top_k results after deduplication
+        return search_results[:top_k]
 
     def get_candidates(self, query: str, top_k: int = 10) -> List[Tuple[str, float]]:
         """
-        Get candidate answer_ids with similarity scores
+        Get candidate IDs with similarity scores
+        Returns (document_id, score) tuples where document_id is answer_id for FAQs or intent_id for Intents
 
         Args:
             query: Query text
             top_k: Number of candidates
 
         Returns:
-            List of (answer_id, score) tuples
+            List of (document_id, score) tuples
         """
         results = self.search(query, top_k)
-        return [(r['answer_id'], r['score']) for r in results]
+        candidates = []
+        for r in results:
+            if r['type'] == 'faq':
+                candidates.append((r['answer_id'], r['score']))
+            elif r['type'] == 'intent':
+                candidates.append((r['intent_id'], r['score']))
+        return candidates
 
     def delete_faq(self, answer_id: str):
         """Delete FAQ from vector database"""
@@ -235,7 +329,7 @@ class VectorSearch:
             self.collection.delete(ids=results['ids'])
 
     def rebuild_index(self):
-        """Rebuild entire vector index from database"""
+        """Rebuild entire vector index from database with FAQs and Intents"""
         # Clear existing collection
         self.client.delete_collection(name=self.collection_name)
 
@@ -249,7 +343,10 @@ class VectorSearch:
         # Get all FAQs
         faqs = db.get_all_faqs()
 
-        print(f"Rebuilding vector index with {len(faqs)} FAQs...")
+        # Get all Intents
+        intents = db.get_all_intents()
+
+        print(f"Rebuilding vector index with {len(faqs)} FAQs and {len(intents)} Intents...")
 
         # Add each FAQ
         for faq in faqs:
@@ -260,6 +357,21 @@ class VectorSearch:
                 metadata={
                     'language': faq.language,
                     'category': faq.category
+                }
+            )
+
+        # Add each Intent
+        for intent in intents:
+            self.add_intent(
+                intent_id=intent.intent_id,
+                intent_name=intent.intent_name,
+                trigger_phrases=intent.trigger_phrases,
+                action_type=intent.action_type,
+                action_config=intent.action_config,
+                metadata={
+                    'language': intent.language,
+                    'category': intent.category,
+                    'description': intent.description
                 }
             )
 

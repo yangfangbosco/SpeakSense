@@ -13,10 +13,11 @@ from shared.database import db
 from services.retrieval_service.bm25_search import bm25_search
 from services.retrieval_service.vector_search import vector_search
 from services.retrieval_service.preprocessing import preprocessor
+from services.retrieval_service.parameter_extraction import parameter_extractor
 
 
 class HybridRetrieval:
-    """Hybrid retrieval system combining BM25 and vector search"""
+    """Unified hybrid retrieval system combining BM25 and vector search over FAQs and Intents"""
 
     def __init__(self):
         self.config = config.get_section('retrieval')
@@ -95,7 +96,8 @@ class HybridRetrieval:
         method: str = "hybrid"
     ) -> List[Dict]:
         """
-        Search FAQs using hybrid retrieval
+        Unified hybrid search over both FAQs and Intents
+        Uses BM25 + Vector search to find the best match (FAQ or Intent)
 
         Args:
             query: Query text
@@ -104,7 +106,7 @@ class HybridRetrieval:
             method: Search method - "hybrid", "bm25", or "vector"
 
         Returns:
-            List of search results with answers and audio paths
+            List of search results (intents or FAQs) with metadata
         """
         if not query.strip():
             return []
@@ -113,8 +115,9 @@ class HybridRetrieval:
         if language is None or language == "auto":
             language = preprocessor.detect_language(query)
 
+        # Unified search over FAQs and Intents
         if method == "bm25":
-            # BM25 only
+            # BM25 only (already includes both FAQs and Intents)
             results = bm25_search.search(query, top_k, language)
             for r in results:
                 r['matched_by'] = 'bm25'
@@ -122,7 +125,7 @@ class HybridRetrieval:
             return results[:top_k]
 
         elif method == "vector":
-            # Vector search only
+            # Vector search only (already includes both FAQs and Intents)
             results = vector_search.search(query, top_k)
             for r in results:
                 r['matched_by'] = 'vector'
@@ -130,7 +133,7 @@ class HybridRetrieval:
             return results[:top_k]
 
         else:  # hybrid
-            # Get candidates from both methods
+            # Get candidates from both methods (FAQs and Intents)
             bm25_candidates = bm25_search.get_candidates(query, self.top_k_bm25, language)
             vector_candidates = vector_search.get_candidates(query, self.top_k_vector)
 
@@ -143,12 +146,14 @@ class HybridRetrieval:
             # Get top-k results
             top_results = fused_scores[:top_k]
 
-            # Retrieve full FAQ information
+            # Retrieve full information (FAQ or Intent)
             results = []
-            for answer_id, score in top_results:
-                faq = db.get_faq_by_id(answer_id)
+            for doc_id, score in top_results:
+                # Try to get as FAQ first
+                faq = db.get_faq_by_id(doc_id)
                 if faq:
                     results.append({
+                        'type': 'faq',
                         'answer_id': faq.answer_id,
                         'question': faq.question,
                         'answer': faq.answer,
@@ -158,6 +163,30 @@ class HybridRetrieval:
                         'confidence': float(score),
                         'matched_by': 'hybrid'
                     })
+                else:
+                    # Try to get as Intent
+                    intent = db.get_intent_by_id(doc_id)
+                    if intent:
+                        # Extract parameters from query using intent's trigger phrases
+                        matched, matched_phrase, parameters = parameter_extractor.match_and_extract(
+                            query, intent.trigger_phrases
+                        )
+
+                        results.append({
+                            'type': 'intent',
+                            'intent_id': intent.intent_id,
+                            'intent_name': intent.intent_name,
+                            'description': intent.description,
+                            'action_type': intent.action_type,
+                            'action_config': intent.action_config,
+                            'language': intent.language,
+                            'category': intent.category,
+                            'score': float(score),
+                            'confidence': float(score),
+                            'matched_by': 'hybrid',
+                            'matched_phrase': matched_phrase if matched else None,
+                            'parameters': parameters  # Extracted parameters
+                        })
 
             return results
 

@@ -62,6 +62,7 @@ class FAQResponse(BaseModel):
     language: str
     category: str
     audio_path: str
+    audio_status: str  # pending, generating, completed, failed
     created_at: datetime
     updated_at: datetime
 
@@ -94,7 +95,8 @@ class FAQEntry:
         category: str,
         audio_path: str,
         created_at: datetime,
-        updated_at: datetime
+        updated_at: datetime,
+        audio_status: str = "pending"
     ):
         self.answer_id = answer_id
         self.question = question
@@ -103,6 +105,7 @@ class FAQEntry:
         self.language = language
         self.category = category
         self.audio_path = audio_path
+        self.audio_status = audio_status  # pending, generating, completed, failed
         self.created_at = created_at
         self.updated_at = updated_at
 
@@ -115,6 +118,86 @@ class FAQEntry:
             "language": self.language,
             "category": self.category,
             "audio_path": self.audio_path,
+            "audio_status": self.audio_status,
+            "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
+            "updated_at": self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at,
+        }
+
+
+# ============ Intent Service Models ============
+
+class IntentCreate(BaseModel):
+    """Model for creating a new intent entry"""
+    intent_name: str = Field(..., description="Unique intent name (e.g., borrow_book)")
+    description: str = Field(..., description="Description of what this intent does")
+    trigger_phrases: List[str] = Field(..., description="Phrases that trigger this intent")
+    action_type: str = Field(..., description="Type of action: open_app, api_call, navigate, etc.")
+    action_config: Dict = Field(default={}, description="Action configuration (app_id, url, params, etc.)")
+    language: str = Field(default="auto", description="Language: zh, en, or auto")
+    category: Optional[str] = Field(default="general", description="Intent category")
+
+
+class IntentResponse(BaseModel):
+    """Response model for intent operations"""
+    intent_id: str
+    intent_name: str
+    description: str
+    trigger_phrases: List[str]
+    action_type: str
+    action_config: Dict
+    language: str
+    category: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class IntentUpdate(BaseModel):
+    """Model for updating an intent entry"""
+    intent_name: Optional[str] = None
+    description: Optional[str] = None
+    trigger_phrases: Optional[List[str]] = None
+    action_type: Optional[str] = None
+    action_config: Optional[Dict] = None
+    language: Optional[str] = None
+    category: Optional[str] = None
+
+
+class IntentEntry:
+    """Database model for intent entry"""
+    def __init__(
+        self,
+        intent_id: str,
+        intent_name: str,
+        description: str,
+        trigger_phrases: List[str],
+        action_type: str,
+        action_config: Dict,
+        language: str,
+        category: str,
+        created_at: datetime,
+        updated_at: datetime
+    ):
+        self.intent_id = intent_id
+        self.intent_name = intent_name
+        self.description = description
+        self.trigger_phrases = trigger_phrases
+        self.action_type = action_type
+        self.action_config = action_config
+        self.language = language
+        self.category = category
+        self.created_at = created_at
+        self.updated_at = updated_at
+
+    def to_dict(self) -> Dict:
+        return {
+            "intent_id": self.intent_id,
+            "intent_name": self.intent_name,
+            "description": self.description,
+            "trigger_phrases": self.trigger_phrases,
+            "action_type": self.action_type,
+            "action_config": self.action_config,
+            "language": self.language,
+            "category": self.category,
             "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
             "updated_at": self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else self.updated_at,
         }
@@ -133,3 +216,50 @@ class ErrorResponse(BaseModel):
     """Error response"""
     error: str
     detail: Optional[str] = None
+
+
+# ============ Query Logs Models ============
+
+class QueryLog:
+    """Query log entry for analytics"""
+    def __init__(
+        self,
+        log_id: str,
+        query_text: str,
+        matched_type: Optional[str],  # 'faq', 'intent', 'none'
+        matched_id: Optional[str],
+        matched_question: Optional[str],
+        confidence: Optional[float],
+        response_time: Optional[float],
+        created_at: datetime
+    ):
+        self.log_id = log_id
+        self.query_text = query_text
+        self.matched_type = matched_type
+        self.matched_id = matched_id
+        self.matched_question = matched_question
+        self.confidence = confidence
+        self.response_time = response_time
+        self.created_at = created_at
+
+
+class QueryLogResponse(BaseModel):
+    """Response model for query log"""
+    log_id: str
+    query_text: str
+    matched_type: Optional[str]
+    matched_id: Optional[str]
+    matched_question: Optional[str]
+    confidence: Optional[float]
+    response_time: Optional[float]
+    created_at: datetime
+
+
+class DashboardStats(BaseModel):
+    """Dashboard statistics response"""
+    today_queries: int
+    total_queries: int
+    avg_response_time: float
+    top_faqs: List[Dict]  # [{question, count}, ...]
+    intent_distribution: List[Dict]  # [{intent_name, count}, ...]
+    daily_trend: List[Dict]  # [{date, count}, ...]

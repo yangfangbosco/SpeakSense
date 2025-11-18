@@ -2,6 +2,14 @@
 
 An on-premise voice interaction system for FAQ retrieval, designed for environments like libraries. The system converts speech to text, matches questions using hybrid retrieval (BM25 + vector search), and responds with pre-generated audio answers.
 
+## 📚 Quick Links
+
+- **[Installation Guide](#installation)** - Set up development environment
+- **[Deployment Guide](DEPLOYMENT.md)** - Deploy to production server
+- **[Migration Guide](deploy/MIGRATION_GUIDE.md)** - Transfer to server (excludes .pyc, .DS_Store, etc.)
+- **[API Documentation](#api-documentation)** - Interactive API docs
+- **[Admin Portal](http://localhost:8090/portal/index.html)** - Web-based FAQ management (after starting services)
+
 ## Features
 
 - **On-Premise Deployment**: All processing happens locally, no cloud dependencies
@@ -284,31 +292,91 @@ Note: Edge TTS requires internet connection.
 
 ## Deployment
 
-### Production Deployment
+### Quick Start Scripts
 
-For production, consider:
+SpeakSense includes automated deployment scripts for easy server deployment:
 
-1. **Use systemd services** (Linux):
-   - Create service files for each service
-   - Enable auto-restart on failure
+```bash
+# Start all services (development)
+./run_all_services.sh
 
-2. **Use Docker** (recommended):
-   ```bash
-   # TODO: Add Dockerfile
-   docker-compose up -d
-   ```
+# Stop all services
+./stop_all_services.sh
 
-3. **Use a process manager**:
-   ```bash
-   # Using PM2
-   pm2 start services/asr_service/main.py --name asr
-   pm2 start services/retrieval_service/main.py --name retrieval
-   pm2 start services/admin_service/main.py --name admin
-   ```
+# Clean all data (database, audio, logs)
+./clean_data.sh
+```
 
-4. **Add reverse proxy** (nginx/traefik) for load balancing
+### 🚀 Server Deployment (One-Click)
 
-5. **Enable HTTPS** for secure communication
+**Option 1: Automated Deployment** (Recommended)
+
+```bash
+# 1. Package the project (excludes .pyc, .DS_Store, dev data, etc.)
+./deploy/package.sh
+
+# 2. Upload to server
+scp speaksense_*.tar.gz user@your-server:/opt/
+
+# 3. On server: extract and deploy
+ssh user@your-server
+cd /opt && tar -xzf speaksense_*.tar.gz
+cd SpeakSense
+
+# 4. One-click deployment (creates conda env, installs deps, downloads models, starts services)
+./deploy/deploy.sh
+```
+
+**Option 2: Incremental Sync** (Fastest for updates)
+
+```bash
+# Direct sync with rsync (auto-excludes temp files)
+./deploy/sync_to_server.sh
+
+# Or specify server directly
+./deploy/sync_to_server.sh user@192.168.1.100:/opt/SpeakSense
+```
+
+### 📋 Deployment Tools
+
+| Script | Description |
+|--------|-------------|
+| `deploy/deploy.sh` | Automated deployment - creates environment, installs dependencies, starts services |
+| `deploy/package.sh` | Create clean deployment package (auto-excludes .pyc, .DS_Store, logs, etc.) |
+| `deploy/sync_to_server.sh` | Incremental rsync sync to server (fastest for updates) |
+| `deploy/clean_temp_files.sh` | Remove .pyc, __pycache__, .DS_Store files |
+| `deploy/test_deployment.sh` | Test all services after deployment |
+| `deploy/check_environment.sh` | Verify system requirements |
+| `deploy/backup.sh` | Backup database and audio files |
+| `deploy/restore.sh` | Restore from backup |
+
+### 📖 Documentation
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide with system requirements and troubleshooting
+- **[deploy/MIGRATION_GUIDE.md](deploy/MIGRATION_GUIDE.md)** - Detailed migration strategies and file exclusion rules
+- **[deploy/README.md](deploy/README.md)** - Deployment scripts usage guide
+
+### 🌐 Access After Deployment
+
+Once deployed, access the system at:
+
+```
+Admin Portal:  http://YOUR_SERVER_IP:8090/portal/index.html
+Testing Portal: http://YOUR_SERVER_IP:8080/web/index.html
+
+API Documentation:
+  ASR Service:       http://YOUR_SERVER_IP:8001/docs
+  Retrieval Service: http://YOUR_SERVER_IP:8002/docs
+  Admin Service:     http://YOUR_SERVER_IP:8003/docs
+```
+
+### 🔧 Production Deployment Options
+
+For production environments, you can also use:
+
+1. **systemd services** (Linux) - See `deploy/systemd/` for example service files
+2. **nginx reverse proxy** - See `deploy/nginx/` for configuration
+3. **Process managers** (PM2, supervisord) - Auto-restart on failure
 
 ### Scaling
 
@@ -352,20 +420,40 @@ SpeakSense/
 │   ├── config.yaml          # Main configuration
 │   └── synonyms.json        # Synonym dictionary
 ├── services/
-│   ├── asr_service/         # ASR Service
-│   ├── retrieval_service/   # Retrieval Service
-│   └── admin_service/       # Admin Service
+│   ├── asr_service/         # ASR Service (Whisper)
+│   ├── retrieval_service/   # Retrieval Service (BM25 + BGE)
+│   └── admin_service/       # Admin Service (FAQ CRUD + TTS)
+├── portal/                  # Admin web portal
+│   ├── index.html          # Main portal page
+│   └── assets/             # CSS, JS, images
 ├── shared/
 │   ├── config_loader.py     # Config utilities
 │   ├── database.py          # SQLite operations
 │   └── models.py            # Pydantic models
+├── deploy/                  # Deployment tools
+│   ├── deploy.sh           # Automated deployment script
+│   ├── package.sh          # Package for deployment
+│   ├── sync_to_server.sh   # Rsync to server
+│   ├── test_deployment.sh  # Test deployment
+│   ├── backup.sh           # Backup data
+│   ├── restore.sh          # Restore from backup
+│   ├── clean_temp_files.sh # Clean .pyc, .DS_Store, etc.
+│   ├── check_environment.sh # Environment verification
+│   ├── MIGRATION_GUIDE.md  # Migration strategies
+│   └── README.md           # Deployment docs
 ├── data/
 │   ├── faq.db              # SQLite database
 │   ├── audio_files/        # Generated/uploaded audio
 │   └── chromadb/           # Vector database
+├── logs/                    # Service logs
 ├── tests/                   # Test scripts
-├── requirements.txt
-└── README.md
+├── run_all_services.sh      # Start all services
+├── stop_all_services.sh     # Stop all services
+├── clean_data.sh            # Clean database & audio
+├── .deployignore            # Files to exclude from deployment
+├── requirements.txt         # Python dependencies
+├── DEPLOYMENT.md            # Full deployment guide
+└── README.md               # This file
 ```
 
 ## License

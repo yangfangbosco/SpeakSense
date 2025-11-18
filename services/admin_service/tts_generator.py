@@ -3,6 +3,11 @@ TTS Generator for SpeakSense
 Text-to-Speech generation with model switching capability
 """
 import os
+# Set offline mode for transformers/HuggingFace to prevent downloads
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['HF_DATASETS_OFFLINE'] = '1'
+
 from pathlib import Path
 from typing import Optional
 import sys
@@ -23,6 +28,8 @@ class TTSModelFactory:
             return PaddleSpeechTTS(**kwargs)
         elif model_type.lower() == "edge-tts":
             return EdgeTTS(**kwargs)
+        elif model_type.lower() == "melo-tts":
+            return MeloTTS(**kwargs)
         else:
             # Default to a simple TTS or raise error
             raise ValueError(f"Unsupported TTS model type: {model_type}")
@@ -147,6 +154,106 @@ class EdgeTTS:
 
         except ImportError:
             print("Warning: edge-tts not installed. Install with: pip install edge-tts")
+            raise
+
+
+class MeloTTS:
+    """MeloTTS wrapper - Local TTS for Chinese and English"""
+
+    def __init__(self, language: str = "auto", **kwargs):
+        self.language = language
+        self.model_zh = None
+        self.model_en = None
+        self._setup_cpu_mode()
+
+    def _setup_cpu_mode(self):
+        """Force CPU mode and disable MPS to avoid compatibility issues"""
+        os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+
+        # Disable MPS globally for torch
+        try:
+            import torch
+            torch.backends.mps.is_available = lambda: False
+        except ImportError:
+            pass
+
+    def _load_model(self, lang: str):
+        """Load MeloTTS model for specified language"""
+        try:
+            from melo.api import TTS
+
+            if lang == "zh" and self.model_zh is None:
+                print("Loading MeloTTS Chinese model...")
+                self.model_zh = TTS(language='ZH', device='cpu')
+                print("MeloTTS Chinese model loaded!")
+            elif lang == "en" and self.model_en is None:
+                print("Loading MeloTTS English model...")
+                self.model_en = TTS(language='EN', device='cpu')
+                print("MeloTTS English model loaded!")
+
+        except ImportError:
+            print("Warning: MeloTTS not installed.")
+            print("Install with: pip install git+https://github.com/myshell-ai/MeloTTS.git")
+            raise
+
+    def generate(
+        self,
+        text: str,
+        output_path: str,
+        language: Optional[str] = None
+    ) -> str:
+        """
+        Generate speech from text using MeloTTS
+
+        Args:
+            text: Text to synthesize
+            output_path: Path to save audio file
+            language: Language override
+
+        Returns:
+            Path to generated audio file
+        """
+        lang = language or self.language
+
+        # Auto-detect language if needed
+        if lang == "auto":
+            import re
+            if re.search(r'[\u4e00-\u9fff]', text):
+                lang = "zh"
+            else:
+                lang = "en"
+
+        # Load appropriate model
+        self._load_model(lang)
+
+        # Ensure output directory exists
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # Select model
+            model = self.model_zh if lang == "zh" else self.model_en
+
+            if model is None:
+                raise RuntimeError(f"MeloTTS model for {lang} not loaded")
+
+            # Generate speech with sdp_ratio=0.2 and noise_scale=0.6 for better quality
+            # speed parameter controls speaking speed (default 1.0)
+            model.tts_to_file(
+                text=text,
+                speaker_id=0,
+                output_path=output_path,
+                speed=1.0,
+                sdp_ratio=0.2,
+                noise_scale=0.6,
+                noise_scale_w=0.8
+            )
+
+            return output_path
+
+        except Exception as e:
+            print(f"MeloTTS generation failed: {e}")
+            import traceback
+            traceback.print_exc()
             raise
 
 

@@ -1,0 +1,89 @@
+# SpeakSense Deployment Ignore File
+# Files and directories listed here should NOT be deployed to production server
+
+# ============ Python ============
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.egg-info/
+dist/
+build/
+*.so
+.Python
+
+# ============ macOS ============
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ============ Version Control ============
+.git/
+.gitignore
+.gitattributes
+
+# ============ IDEs ============
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ============ Logs ============
+*.log
+logs/*.log
+nohup.out
+
+# ============ Development Data ============
+data/faq.db
+data/*/faq.db
+data/audio_files/*
+data/*/audio_files/*
+data/chromadb/*
+data/*/chromadb/*
+
+# ============ Virtual Environments ============
+venv/
+env/
+ENV/
+.venv/
+.conda/
+
+# ============ Caches ============
+.cache/
+.pytest_cache/
+.mypy_cache/
+*.cache
+
+# ============ Backups ============
+backups/*.tar.gz
+*.tar.gz
+*.bak
+*.backup
+
+# ============ Temporary Files ============
+*.tmp
+*.temp
+.tmp/
+tmp/
+
+# ============ SQLite Temporary ============
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ============ Node.js (if any) ============
+node_modules/
+npm-debug.log
+
+# ============ OS Specific ============
+Thumbs.db
+Desktop.ini
+
+# ============ Documentation Drafts ============
+# Keep only final docs
+# drafts/
+# notes/
