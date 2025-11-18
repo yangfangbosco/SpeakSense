@@ -18,6 +18,7 @@ rank-bm25==0.2.2  # BM25 algorithm for keyword search
 
 # ============ Embeddings & Vector Search ============
 # Using stable versions that are tested and compatible
+huggingface-hub==0.19.4  # Required for sentence-transformers 2.2.2 (has cached_download)
 transformers==4.36.0  # Stable version
 sentence-transformers==2.2.2  # Stable version compatible with transformers 4.36.0
 chromadb==0.4.18  # Vector database
