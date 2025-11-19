@@ -813,7 +813,15 @@
                             style="margin-top: 0.5rem;"
                             :disabled="!faqForm.answer || previewingAudio"
                         >
-                            <span>{{ previewingAudio ? '⏳' : '🔊' }}</span> {{ t('previewAudio') }}
+                            <span v-if="previewingAudio && previewCountdown > 0">
+                                ⏳ {{ currentLanguage === 'zh' ? '生成中... (' + previewCountdown + '秒)' : 'Generating... (' + previewCountdown + 's)' }}
+                            </span>
+                            <span v-else-if="previewingAudio">
+                                ⏳ {{ currentLanguage === 'zh' ? '生成中...' : 'Generating...' }}
+                            </span>
+                            <span v-else>
+                                🔊 {{ t('previewAudio') }}
+                            </span>
                         </button>
                         <audio v-if="previewAudioUrl" :key="audioKey" id="preview-audio-player" controls style="width: 100%; margin-top: 0.5rem;">
                             <source :src="previewAudioUrl" type="audio/wav">

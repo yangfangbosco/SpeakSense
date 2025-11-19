@@ -58,6 +58,9 @@ conda activate speaksense
 
 pip install -r requirements.txt
 pip install git+https://github.com/myshell-ai/MeloTTS.git
+
+# 下载 MeloTTS 所需的日语词典
+python -m unidic download
 ```
 
 **优点：**

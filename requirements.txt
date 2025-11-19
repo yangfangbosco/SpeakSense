@@ -19,28 +19,38 @@ rank-bm25==0.2.2  # BM25 algorithm for keyword search
 # ============ Embeddings & Vector Search ============
 # Using stable versions that are tested and compatible
 huggingface-hub==0.19.4  # Required for sentence-transformers 2.2.2 (has cached_download)
-transformers==4.36.0  # Stable version
-sentence-transformers==2.2.2  # Stable version compatible with transformers 4.36.0
+transformers==4.51.3  # Updated for CosyVoice2 compatibility
+sentence-transformers==2.2.2  # Stable version
 chromadb==0.4.18  # Vector database
 # Note: ChromaDB will automatically install required dependencies
 
 # ============ TTS (Text-to-Speech) ============
-# MeloTTS (Local Chinese + English TTS, no internet required)
-git+https://github.com/myshell-ai/MeloTTS.git
-unidic-lite  # Japanese dictionary for MeloTTS (required dependency)
+# Only two TTS models are supported: edge-tts and CosyVoice2
 
-# PaddleSpeech (Chinese + English TTS) - OPTIONAL
-# Note: If using MeloTTS only, you can skip PaddleSpeech installation
-# Comment out the following lines if not needed:
-paddlepaddle==2.6.2  # CPU version (updated for compatibility)
-# For GPU: paddlepaddle-gpu==2.6.2
-paddlespeech==1.4.1
+# Edge TTS - Online TTS service (used for reference audio generation)
+edge-tts==6.1.9  # Microsoft Edge TTS
 
-# Alternative TTS option (requires internet):
-edge-tts==6.1.9  # Microsoft Edge TTS (optional)
+# CosyVoice2 TTS - Primary offline TTS with zero-shot voice cloning
+modelscope==1.20.0  # For model downloading
+HyperPyYAML==1.2.2  # For config parsing
+onnxruntime==1.18.0  # For ONNX model inference
+pyworld==0.3.4  # Audio processing for CosyVoice
+wetext==0.0.4  # Text normalization for CosyVoice
+conformer==0.3.2  # Conformer blocks for CosyVoice
+diffusers==0.29.0  # Diffusion models for CosyVoice
+omegaconf==2.3.0  # Configuration management
+hydra-core==1.3.2  # Configuration framework
+lightning==2.2.4  # PyTorch Lightning for CosyVoice
+matplotlib==3.7.5  # Plotting library for CosyVoice
+onnx==1.16.0  # ONNX model format
+protobuf==4.25  # Protocol buffers
+rich==13.7.1  # Rich text formatting
+gdown==5.1.0  # Google Drive downloader
+inflect==7.3.1  # Text processing for numbers
+wget==3.2  # File downloader
 
 # ============ Audio Processing ============
-librosa==0.8.1  # Audio processing utilities (pinned for PaddleSpeech compatibility)
+librosa==0.10.2  # Updated for CosyVoice2 compatibility
 soundfile==0.12.1  # Audio file I/O
 pydub==0.25.1  # Audio manipulation
 
@@ -49,9 +59,10 @@ pydub==0.25.1  # Audio manipulation
 
 # ============ Utilities ============
 requests==2.31.0
-numpy==1.24.3  # Pin version for compatibility
-torch==2.2.2  # For Whisper, embeddings, and MeloTTS (CPU version)
-# For GPU: torch==2.2.2+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+numpy==1.23.5  # Required by matplotlib and numba, compatible with Python 3.10
+torch==2.3.1  # Updated for CosyVoice2 (CPU version)
+torchaudio==2.3.1  # Required by CosyVoice2
+# For GPU: torch==2.3.1+cu121 -f https://download.pytorch.org/whl/torch_stable.html
 
 # ============ Development & Testing ============
 pytest==7.4.3

@@ -59,6 +59,8 @@ createApp({
             previewingAudio: false,
             previewAudioUrl: null,
             audioKey: 0,
+            previewCountdown: 0,
+            previewCountdownTimer: null,
 
             // Notification
             notification: {
@@ -949,6 +951,14 @@ createApp({
 
             try {
                 this.previewingAudio = true;
+                this.previewCountdown = 60;  // Start at 60 seconds (1 minute)
+
+                // Start countdown timer
+                this.previewCountdownTimer = setInterval(() => {
+                    if (this.previewCountdown > 0) {
+                        this.previewCountdown--;
+                    }
+                }, 1000);
 
                 // Create FormData for the preview request
                 const formData = new FormData();
@@ -1032,7 +1042,13 @@ createApp({
                 console.error('Failed to preview audio:', error);
                 this.showNotification(this.t('audioPreviewFailed'), 'error');
             } finally {
+                // Clear countdown timer
+                if (this.previewCountdownTimer) {
+                    clearInterval(this.previewCountdownTimer);
+                    this.previewCountdownTimer = null;
+                }
                 this.previewingAudio = false;
+                this.previewCountdown = 0;
             }
         },
 

@@ -17,11 +17,11 @@ embedding:
 
 # TTS Configuration
 tts:
-  model_type: "melo-tts"  # Using MeloTTS (local, no internet required, supports ZH+EN)
+  model_type: "cosyvoice2"  # Using CosyVoice2-0.5B (zero-shot voice cloning, multi-language)
   language: "auto"  # auto, zh, en
   speed: 1.0
   volume: 1.0
-  sample_rate: 24000
+  sample_rate: 22050  # CosyVoice2 uses 22050 Hz
 
 # Vector Database Configuration
 vector_db:
@@ -43,7 +43,7 @@ retrieval:
 admin:
   port: 8003
   audio_output_dir: "./data/audio_files"
-  audio_format: "wav"  # wav, mp3 (MeloTTS generates WAV format)
+  audio_format: "wav"  # wav, mp3 (PaddleSpeech generates WAV format)
 
 # Database Configuration
 database:

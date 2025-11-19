@@ -24,91 +24,12 @@ class TTSModelFactory:
     @staticmethod
     def create_model(model_type: str, **kwargs):
         """Create TTS model based on type"""
-        if model_type.lower() == "paddlespeech":
-            return PaddleSpeechTTS(**kwargs)
-        elif model_type.lower() == "edge-tts":
+        if model_type.lower() == "edge-tts":
             return EdgeTTS(**kwargs)
-        elif model_type.lower() == "melo-tts":
-            return MeloTTS(**kwargs)
+        elif model_type.lower() in ["cosyvoice2", "cosyvoice2-0.5b"]:
+            return CosyVoice2TTS(**kwargs)
         else:
-            # Default to a simple TTS or raise error
-            raise ValueError(f"Unsupported TTS model type: {model_type}")
-
-
-class PaddleSpeechTTS:
-    """PaddleSpeech TTS wrapper"""
-
-    def __init__(self, language: str = "auto", speed: float = 1.0, volume: float = 1.0):
-        self.language = language
-        self.speed = speed
-        self.volume = volume
-        self.synthesizer = None
-
-    def _load_model(self, lang: str = "zh"):
-        """Load PaddleSpeech model"""
-        try:
-            from paddlespeech.cli.tts.infer import TTSExecutor
-
-            if self.synthesizer is None:
-                print(f"Loading PaddleSpeech TTS model for language: {lang}...")
-                self.synthesizer = TTSExecutor()
-                print("PaddleSpeech TTS model loaded!")
-        except ImportError:
-            print("Warning: PaddleSpeech not installed. TTS generation will not work.")
-            print("Install with: pip install paddlespeech paddlepaddle")
-            raise
-
-    def generate(
-        self,
-        text: str,
-        output_path: str,
-        language: Optional[str] = None
-    ) -> str:
-        """
-        Generate speech from text
-
-        Args:
-            text: Text to synthesize
-            output_path: Path to save audio file
-            language: Language override
-
-        Returns:
-            Path to generated audio file
-        """
-        lang = language or self.language
-
-        # Auto-detect language if needed
-        if lang == "auto":
-            # Simple detection based on Chinese characters
-            import re
-            if re.search(r'[\u4e00-\u9fff]', text):
-                lang = "zh"
-            else:
-                lang = "en"
-
-        # Load model for the language
-        self._load_model(lang)
-
-        # Ensure output directory exists
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-        try:
-            # Generate speech
-            self.synthesizer(
-                text=text,
-                output=output_path,
-                am='fastspeech2_csmsc' if lang == 'zh' else 'fastspeech2_ljspeech',
-                voc='pwgan_csmsc' if lang == 'zh' else 'pwgan_ljspeech',
-                lang=lang,
-                sample_rate=24000,
-                spk_id=0
-            )
-
-            return output_path
-
-        except Exception as e:
-            print(f"TTS generation failed: {e}")
-            raise
+            raise ValueError(f"Unsupported TTS model type: {model_type}. Only 'edge-tts' and 'cosyvoice2' are supported.")
 
 
 class EdgeTTS:
@@ -157,44 +78,116 @@ class EdgeTTS:
             raise
 
 
-class MeloTTS:
-    """MeloTTS wrapper - Local TTS for Chinese and English"""
+class CosyVoice2TTS:
+    """
+    CosyVoice2 TTS wrapper - Multi-lingual zero-shot voice cloning
+
+    CosyVoice2-0.5B is a powerful TTS model that supports:
+    - Multi-language synthesis (Chinese, English, etc.)
+    - Zero-shot voice cloning with reference audio
+    - High quality natural speech
+    - Local inference (no internet required)
+    """
 
     def __init__(self, language: str = "auto", **kwargs):
         self.language = language
-        self.model_zh = None
-        self.model_en = None
-        self._setup_cpu_mode()
+        self.model = None
+        # Path to locally downloaded CosyVoice2 model
+        project_root = Path(__file__).parent.parent.parent
+        self.model_dir = project_root / "models" / "CosyVoice2-0.5B"
+        self.config_path = self.model_dir / "cosyvoice2.yaml"
+        # Reference audio for voice cloning
+        self.reference_audio_path = self.model_dir / "reference_speaker.wav"
 
-    def _setup_cpu_mode(self):
-        """Force CPU mode and disable MPS to avoid compatibility issues"""
-        os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+    def _load_model(self):
+        """Load CosyVoice2 model from local checkpoint"""
+        if self.model is None:
+            try:
+                # Add CosyVoice to path
+                project_root = Path(__file__).parent.parent.parent
+                cosyvoice_path = project_root / "third_party" / "CosyVoice"
+                sys.path.insert(0, str(cosyvoice_path))
+                sys.path.insert(0, str(cosyvoice_path / "third_party" / "Matcha-TTS"))
 
-        # Disable MPS globally for torch
-        try:
-            import torch
-            torch.backends.mps.is_available = lambda: False
-        except ImportError:
-            pass
+                print(f"Loading CosyVoice2 model from: {self.model_dir}...")
 
-    def _load_model(self, lang: str):
-        """Load MeloTTS model for specified language"""
-        try:
-            from melo.api import TTS
+                # Check if model exists
+                if not self.config_path.exists():
+                    raise FileNotFoundError(
+                        f"CosyVoice2 model not found at {self.model_dir}\n"
+                        f"Please download the model using: python download_cosyvoice_model.py"
+                    )
 
-            if lang == "zh" and self.model_zh is None:
-                print("Loading MeloTTS Chinese model...")
-                self.model_zh = TTS(language='ZH', device='cpu')
-                print("MeloTTS Chinese model loaded!")
-            elif lang == "en" and self.model_en is None:
-                print("Loading MeloTTS English model...")
-                self.model_en = TTS(language='EN', device='cpu')
-                print("MeloTTS English model loaded!")
+                # Import CosyVoice2
+                from cosyvoice.cli.cosyvoice import CosyVoice2
 
-        except ImportError:
-            print("Warning: MeloTTS not installed.")
-            print("Install with: pip install git+https://github.com/myshell-ai/MeloTTS.git")
-            raise
+                # Load model
+                self.model = CosyVoice2(
+                    str(self.model_dir),
+                    load_jit=False,
+                    load_trt=False,
+                    fp16=False
+                )
+
+                print("✓ CosyVoice2 model loaded successfully!")
+
+            except ImportError as e:
+                print(f"Error importing CosyVoice2: {e}")
+                print("Make sure CosyVoice is properly installed in third_party/CosyVoice/")
+                raise
+            except FileNotFoundError as e:
+                print(f"Error: {e}")
+                raise
+            except Exception as e:
+                print(f"Error loading CosyVoice2 model: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
+
+    def _ensure_reference_audio(self):
+        """Ensure reference audio exists for voice cloning"""
+        if not self.reference_audio_path.exists():
+            print("Reference audio not found. Generating with edge-tts...")
+            try:
+                import asyncio
+                import edge_tts
+                import soundfile as sf
+                import librosa
+
+                # Generate reference audio with edge-tts
+                # Using short, natural phrase for better voice cloning
+                async def generate_reference():
+                    tts = edge_tts.Communicate(
+                        '你好，欢迎使用语音问答系统。',
+                        'zh-CN-XiaoxiaoNeural'
+                    )
+                    temp_path = str(self.reference_audio_path) + '.temp.mp3'
+                    await tts.save(temp_path)
+
+                    # Convert to proper format (22050 Hz, mono, PCM_16)
+                    data, sr = sf.read(temp_path)
+                    if len(data.shape) > 1:
+                        data = data.mean(axis=1)  # Convert to mono
+                    if sr != 22050:
+                        data = librosa.resample(data, orig_sr=sr, target_sr=22050)
+                    sf.write(str(self.reference_audio_path), data, 22050, subtype='PCM_16')
+
+                    # Clean up temp file
+                    import os
+                    os.remove(temp_path)
+                    print(f"✓ Reference audio generated: {self.reference_audio_path}")
+
+                # Run async function
+                asyncio.run(generate_reference())
+
+            except Exception as e:
+                print(f"Failed to generate reference audio: {e}")
+                # Create a silent reference audio as fallback
+                import numpy as np
+                import scipy.io.wavfile
+                silence = np.zeros(int(22050 * 2), dtype=np.float32)  # 2 seconds of silence
+                scipy.io.wavfile.write(str(self.reference_audio_path), 22050, silence)
+                print("⚠ Created silent reference audio (voice cloning may not work optimally)")
 
     def generate(
         self,
@@ -203,7 +196,7 @@ class MeloTTS:
         language: Optional[str] = None
     ) -> str:
         """
-        Generate speech from text using MeloTTS
+        Generate speech from text using CosyVoice2
 
         Args:
             text: Text to synthesize
@@ -223,35 +216,49 @@ class MeloTTS:
             else:
                 lang = "en"
 
-        # Load appropriate model
-        self._load_model(lang)
+        # Load model
+        self._load_model()
+
+        # Ensure reference audio exists
+        self._ensure_reference_audio()
 
         # Ensure output directory exists
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            # Select model
-            model = self.model_zh if lang == "zh" else self.model_en
+            # Load reference audio
+            from cosyvoice.utils.file_utils import load_wav
+            import torchaudio
 
-            if model is None:
-                raise RuntimeError(f"MeloTTS model for {lang} not loaded")
+            prompt_speech_16k = load_wav(str(self.reference_audio_path), 16000)
 
-            # Generate speech with sdp_ratio=0.2 and noise_scale=0.6 for better quality
-            # speed parameter controls speaking speed (default 1.0)
-            model.tts_to_file(
-                text=text,
-                speaker_id=0,
-                output_path=output_path,
-                speed=1.0,
-                sdp_ratio=0.2,
-                noise_scale=0.6,
-                noise_scale_w=0.8
-            )
+            # Generate speech using zero-shot inference
+            # Reference text (should match the reference audio content exactly)
+            # Using the exact text from reference audio generation
+            prompt_text = "你好，欢迎使用语音问答系统。"
+
+            print(f"Generating speech for text: {text[:50]}...")
+
+            # Use inference_zero_shot for voice cloning
+            for i, output in enumerate(self.model.inference_zero_shot(
+                text,
+                prompt_text,
+                prompt_speech_16k,
+                stream=False
+            )):
+                # Save audio
+                torchaudio.save(
+                    output_path,
+                    output['tts_speech'],
+                    self.model.sample_rate
+                )
+                print(f"✓ Audio saved to: {output_path}")
+                break  # Only take the first output
 
             return output_path
 
         except Exception as e:
-            print(f"MeloTTS generation failed: {e}")
+            print(f"CosyVoice2 generation failed: {e}")
             import traceback
             traceback.print_exc()
             raise
