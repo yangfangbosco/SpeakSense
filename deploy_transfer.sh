@@ -194,8 +194,8 @@ echo ""
 
 if [[ -z $REPLY ]] || [[ $REPLY =~ ^[1]$ ]]; then
     SYNC_MODE="incremental"
-    RSYNC_OPTS="-avz --progress"
-    echo -e "${GREEN}✓ 选择：增量同步模式${NC}"
+    RSYNC_OPTS="-avz --progress --checksum"
+    echo -e "${GREEN}✓ 选择：增量同步模式（使用 checksum 精确检测）${NC}"
 elif [[ $REPLY =~ ^[2]$ ]]; then
     SYNC_MODE="full"
     RSYNC_OPTS="-avz --progress --checksum"
@@ -245,10 +245,10 @@ ssh ${REMOTE} "mkdir -p ${REMOTE_PATH}/{models,third_party,services,portal,share
 echo -e "${GREEN}✓ 目录创建完成${NC}"
 echo ""
 
-# 传输项目代码
-echo "6. 传输项目代码..."
+# 传输项目代码（强制同步，确保代码完全一致）
+echo "6. 传输项目代码（强制同步）..."
 echo "   正在同步源文件和脚本..."
-rsync ${RSYNC_OPTS} \
+rsync ${RSYNC_OPTS} --delete \
     --exclude='*.pyc' \
     --exclude='__pycache__/' \
     --exclude='.git/' \
@@ -267,11 +267,18 @@ rsync ${RSYNC_OPTS} \
     --exclude='*.tar.gz' \
     --exclude='*.zip' \
     ./ ${REMOTE}:${REMOTE_PATH}/
-echo -e "${GREEN}✓ 项目代码同步完成${NC}"
+echo -e "${GREEN}✓ 项目代码强制同步完成${NC}"
+echo ""
+
+# 专门同步 portal 前端（确保前端文件被正确更新）
+echo "7. 强制同步 Portal 前端..."
+echo "   正在同步前端文件..."
+rsync ${RSYNC_OPTS} --delete portal/ ${REMOTE}:${REMOTE_PATH}/portal/
+echo -e "${GREEN}✓ Portal 前端同步完成${NC}"
 echo ""
 
 # 传输项目模型
-echo "7. 同步项目模型..."
+echo "8. 同步项目模型..."
 echo "   [1/4] 正在同步 models/CosyVoice2-0.5B/..."
 rsync ${RSYNC_OPTS} models/CosyVoice2-0.5B/ ${REMOTE}:${REMOTE_PATH}/models/CosyVoice2-0.5B/
 echo -e "${GREEN}✓ CosyVoice2 模型同步完成${NC}"
@@ -293,7 +300,7 @@ echo -e "${GREEN}✓ CosyVoice 代码同步完成${NC}"
 echo ""
 
 # 传输缓存模型
-echo "8. 同步缓存模型到用户目录..."
+echo "9. 同步缓存模型到用户目录..."
 if [ -d "$HOME/.cache/whisper" ]; then
     echo "   [1/2] 正在同步 Whisper 模型..."
     rsync ${RSYNC_OPTS} ~/.cache/whisper/ ${REMOTE}:~/.cache/whisper/
@@ -309,7 +316,7 @@ if [ -d "$HOME/.cache/huggingface" ]; then
 fi
 
 # 传输环境构建脚本
-echo "9. 传输环境构建脚本..."
+echo "10. 传输环境构建脚本..."
 if [ -f "deploy_setup.sh" ]; then
     scp deploy_setup.sh ${REMOTE}:${REMOTE_PATH}/
     ssh ${REMOTE} "chmod +x ${REMOTE_PATH}/deploy_setup.sh"

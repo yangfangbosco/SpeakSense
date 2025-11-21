@@ -7,10 +7,15 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
 pyyaml==6.0.1
+websockets==12.0  # WebSocket support for streaming audio
 
 # ============ ASR (Automatic Speech Recognition) ============
-openai-whisper==20231117
-# Alternative: pip install git+https://github.com/openai/whisper.git
+# Faster-whisper: 4-5x faster than openai-whisper with same accuracy
+faster-whisper==1.2.1
+# Silero-VAD: Voice Activity Detection for automatic speech segmentation
+silero-vad==6.2.0
+# Legacy support (can be removed after migration)
+# openai-whisper==20231117
 
 # ============ Text Processing ============
 jieba==0.42.1  # Chinese word segmentation
@@ -64,6 +69,9 @@ numpy==1.23.5  # Required by matplotlib and numba, compatible with Python 3.10
 torch==2.3.1  # Updated for CosyVoice2 (CPU version)
 torchaudio==2.3.1  # Required by CosyVoice2
 # For GPU: torch==2.3.1+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+
+# ============ File Processing ============
+openpyxl==3.1.2  # Excel file support for batch FAQ import
 
 # ============ Development & Testing ============
 pytest==7.4.3

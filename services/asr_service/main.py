@@ -1,12 +1,18 @@
 """
 ASR Service - Automatic Speech Recognition
 Provides API for converting audio to text using Whisper
+Supports both file upload and WebSocket streaming with VAD
 """
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import sys
 from pathlib import Path
+import numpy as np
+import json
+import tempfile
+import os
+import logging
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -14,6 +20,11 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from shared.config_loader import config
 from shared.models import ASRResponse, HealthResponse, ErrorResponse
 from services.asr_service.asr_model import ASRModel
+from services.asr_service.vad_detector import VADDetector
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -133,6 +144,130 @@ async def get_model_info():
         "model_name": asr_model.model_name,
         "device": asr_model.device
     }
+
+
+@app.websocket("/asr/stream")
+async def websocket_streaming_asr(websocket: WebSocket):
+    """
+    WebSocket endpoint for streaming ASR with automatic VAD-based segmentation
+
+    Protocol:
+    1. Client connects and sends audio chunks (PCM 16kHz mono, int16)
+    2. Server processes with VAD, detects speech segments
+    3. When silence detected (speech ends), server transcribes and sends result
+    4. Server sends status updates: "speaking", "silence", "transcribing"
+
+    Message format (JSON):
+    - From client: {"type": "audio", "data": base64_encoded_audio}
+    - From server: {"type": "status", "status": "speaking|silence|transcribing"}
+    - From server: {"type": "result", "text": "...", "language": "..."}
+    - From server: {"type": "error", "message": "..."}
+    """
+    await websocket.accept()
+    logger.info("WebSocket client connected")
+
+    # Initialize VAD detector
+    vad = VADDetector(
+        sample_rate=16000,
+        threshold=0.5,
+        min_speech_duration_ms=250,
+        min_silence_duration_ms=800,  # 0.8s silence triggers transcription
+        speech_pad_ms=30
+    )
+
+    try:
+        while True:
+            # Receive message from client
+            message = await websocket.receive_json()
+
+            if message.get("type") == "audio":
+                # Decode base64 audio data
+                import base64
+                audio_data = base64.b64decode(message["data"])
+
+                # Convert bytes to numpy array (assuming int16 PCM)
+                audio_chunk = np.frombuffer(audio_data, dtype=np.int16)
+
+                # Process with VAD
+                is_speaking, speech_ended, complete_audio = vad.process_chunk(audio_chunk)
+
+                # Send status update
+                if is_speaking and not speech_ended:
+                    await websocket.send_json({
+                        "type": "status",
+                        "status": "speaking"
+                    })
+
+                # If speech segment ended, transcribe it
+                if speech_ended and complete_audio is not None:
+                    logger.info(f"Speech segment ended, transcribing {len(complete_audio)} samples...")
+
+                    # Send transcribing status
+                    await websocket.send_json({
+                        "type": "status",
+                        "status": "transcribing"
+                    })
+
+                    try:
+                        # Save to temporary WAV file
+                        import wave
+                        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
+                            temp_path = temp_wav.name
+
+                            # Write WAV file
+                            with wave.open(temp_path, 'wb') as wav_file:
+                                wav_file.setnchannels(1)  # Mono
+                                wav_file.setsampwidth(2)  # 16-bit
+                                wav_file.setframerate(16000)  # 16kHz
+
+                                # Convert float32 (-1.0 to 1.0) to int16 (-32768 to 32767)
+                                audio_int16 = (complete_audio * 32767).astype(np.int16)
+                                wav_file.writeframes(audio_int16.tobytes())
+
+                        # Transcribe
+                        result = asr_model.transcribe(
+                            audio_path=temp_path,
+                            language=None  # Auto-detect
+                        )
+
+                        # Clean up temp file
+                        os.remove(temp_path)
+
+                        # Send result
+                        await websocket.send_json({
+                            "type": "result",
+                            "text": result['text'],
+                            "language": result.get('language', 'unknown')
+                        })
+
+                        logger.info(f"Transcription result: {result['text']}")
+
+                    except Exception as e:
+                        logger.error(f"Transcription error: {e}")
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": f"Transcription failed: {str(e)}"
+                        })
+
+            elif message.get("type") == "reset":
+                # Reset VAD state
+                vad.reset()
+                await websocket.send_json({
+                    "type": "status",
+                    "status": "reset"
+                })
+
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "message": str(e)
+            })
+        except:
+            pass
 
 
 if __name__ == "__main__":

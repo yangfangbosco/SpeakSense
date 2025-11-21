@@ -9,6 +9,10 @@ echo "================================"
 # Get the project root directory
 PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Activate conda environment
+source ~/opt/anaconda3/etc/profile.d/conda.sh
+conda activate speaksense
+
 # Create logs directory
 mkdir -p "$PROJECT_ROOT/logs"
 
@@ -85,6 +89,7 @@ lsof -ti:8080 | xargs kill -9 2>/dev/null
 # Start ASR Service
 echo "Starting ASR Service on port 8001..."
 cd "$PROJECT_ROOT/services/asr_service"
+export KMP_DUPLICATE_LIB_OK=TRUE
 nohup python main.py > "$PROJECT_ROOT/logs/asr_service.log" 2>&1 &
 ASR_PID=$!
 echo "ASR Service started (PID: $ASR_PID)"

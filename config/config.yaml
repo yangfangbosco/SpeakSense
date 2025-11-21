@@ -2,10 +2,10 @@
 
 # ASR Service Configuration
 asr:
-  model_type: "whisper"
-  model_name: "base"  # Options: tiny, base, small, medium, large (using base for speed)
+  model_type: "whisper"  # whisper (stable) or faster-whisper (faster but has macOS issues)
+  model_name: "base"  # Options: tiny, base, small, medium, large
   language: "auto"  # auto, zh, en
-  device: "cpu"  # cpu (MPS has compatibility issues with current PyTorch)
+  device: "cpu"  # cpu, cuda
   port: 8001
 
 # Embedding Model Configuration
