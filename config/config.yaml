@@ -2,7 +2,7 @@
 
 # ASR Service Configuration
 asr:
-  model_type: "whisper"  # whisper (stable) or faster-whisper (faster but has macOS issues)
+  model_type: "faster-whisper"  # faster-whisper (4-5x faster, works well on Linux)
   model_name: "base"  # Options: tiny, base, small, medium, large
   language: "auto"  # auto, zh, en
   device: "cpu"  # cpu, cuda
