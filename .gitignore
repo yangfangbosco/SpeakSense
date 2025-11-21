@@ -36,8 +36,9 @@ data/chromadb/
 
 # Models (large files)
 models/
-# Exception: Include Silero-VAD model (needed for offline deployment)
+# Exception: Include models needed for offline deployment
 !models/silero-vad/
+!models/faster-whisper-base/
 
 # Portal configuration backups
 portal/assets/js/app.js.original

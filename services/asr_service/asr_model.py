@@ -180,7 +180,7 @@ class FasterWhisperASR:
         self._load_model()
 
     def _load_model(self):
-        """Load Faster-whisper model"""
+        """Load Faster-whisper model from project directory"""
         # Map device
         if self.device == "cuda" and not torch.cuda.is_available():
             print("CUDA not available, falling back to CPU")
@@ -196,13 +196,41 @@ class FasterWhisperASR:
 
         print(f"Loading Faster-whisper model: {self.model_name} on {device} with {compute_type}...")
 
-        # Load model with CTranslate2 optimization
-        self.model = WhisperModel(
-            self.model_name,
-            device=device,
-            compute_type=compute_type,
-            download_root=str(Path.home() / ".cache" / "whisper")
-        )
+        # Get project root directory
+        project_root = Path(__file__).parent.parent.parent
+        model_cache_dir = project_root / "models" / f"faster-whisper-{self.model_name}"
+
+        # Check if model exists in project directory
+        if model_cache_dir.exists():
+            # Find the actual model path in snapshots
+            snapshots_dir = model_cache_dir / "snapshots"
+            if snapshots_dir.exists():
+                # Get the first (and usually only) snapshot
+                snapshot_dirs = list(snapshots_dir.iterdir())
+                if snapshot_dirs:
+                    model_path = snapshot_dirs[0]
+                    print(f"Loading from local path: {model_path}")
+                    # Load from project directory
+                    self.model = WhisperModel(
+                        str(model_path),
+                        device=device,
+                        compute_type=compute_type,
+                        local_files_only=True
+                    )
+                    return
+
+            print(f"Warning: Model cache found but no snapshot directory, trying direct load...")
+        else:
+            # Fallback: download to project directory
+            print(f"Model not found locally, downloading to project directory...")
+            download_root = project_root / "models"
+            download_root.mkdir(parents=True, exist_ok=True)
+            self.model = WhisperModel(
+                self.model_name,
+                device=device,
+                compute_type=compute_type,
+                download_root=str(download_root)
+            )
 
         print(f"Faster-whisper model loaded successfully!")
 
