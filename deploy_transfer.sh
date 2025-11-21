@@ -212,6 +212,7 @@ echo "   - 项目代码（所有源文件和脚本）"
 echo "   - models/CosyVoice2-0.5B/ (约 4.8GB)"
 echo "   - models/wetext/ (约 13MB)"
 echo "   - models/embedding/bge-small-zh-v1.5/ (约 182MB)"
+echo "   - models/silero-vad/ (约 25MB, 语音检测)"
 echo "   - third_party/CosyVoice/ (约 71MB)"
 if [ -d "$HOME/.cache/whisper" ]; then
     echo "   - ~/.cache/whisper/ (约 1.6GB)"
@@ -294,7 +295,12 @@ rsync ${RSYNC_OPTS} models/embedding/bge-small-zh-v1.5/ ${REMOTE}:${REMOTE_PATH}
 echo -e "${GREEN}✓ BGE Embedding 模型同步完成${NC}"
 echo ""
 
-echo "   [4/4] 正在同步 third_party/CosyVoice/..."
+echo "   [4/5] 正在同步 models/silero-vad/..."
+rsync ${RSYNC_OPTS} models/silero-vad/ ${REMOTE}:${REMOTE_PATH}/models/silero-vad/
+echo -e "${GREEN}✓ Silero-VAD 模型同步完成${NC}"
+echo ""
+
+echo "   [5/5] 正在同步 third_party/CosyVoice/..."
 rsync ${RSYNC_OPTS} third_party/CosyVoice/ ${REMOTE}:${REMOTE_PATH}/third_party/CosyVoice/
 echo -e "${GREEN}✓ CosyVoice 代码同步完成${NC}"
 echo ""

@@ -49,16 +49,33 @@ class VADDetector:
         self.reset()
 
     def _load_model(self):
-        """Load Silero-VAD model"""
+        """Load Silero-VAD model from local path or GitHub"""
         try:
-            # Load pretrained Silero-VAD model
             logger.info("Loading Silero-VAD model...")
-            self.model, utils = torch.hub.load(
-                repo_or_dir='snakers4/silero-vad',
-                model='silero_vad',
-                force_reload=False,
-                onnx=False  # Use PyTorch version
-            )
+
+            # Try to load from local project path first
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent.parent
+            local_model_path = project_root / "models" / "silero-vad"
+
+            if local_model_path.exists() and (local_model_path / "hubconf.py").exists():
+                logger.info(f"Loading from local path: {local_model_path}")
+                self.model, utils = torch.hub.load(
+                    repo_or_dir=str(local_model_path),
+                    model='silero_vad',
+                    source='local',
+                    force_reload=False,
+                    onnx=False
+                )
+            else:
+                # Fallback to GitHub (requires internet access)
+                logger.info("Local model not found, loading from GitHub...")
+                self.model, utils = torch.hub.load(
+                    repo_or_dir='snakers4/silero-vad',
+                    model='silero_vad',
+                    force_reload=False,
+                    onnx=False
+                )
 
             # Extract utilities
             (self.get_speech_timestamps,
