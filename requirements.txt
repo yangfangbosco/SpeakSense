@@ -73,11 +73,12 @@ torchaudio==2.3.1  # Required by CosyVoice2
 # ============ File Processing ============
 openpyxl==3.1.2  # Excel file support for batch FAQ import
 
-# ============ Development & Testing ============
-pytest==7.4.3
-httpx==0.25.1  # For testing FastAPI endpoints
-black==23.11.0  # Code formatting
-flake8==6.1.0  # Linting
+# ============ Optional Development Dependencies ============
+# Uncomment if needed for development:
+# pytest==7.4.3  # Testing framework
+# httpx==0.25.1  # For testing FastAPI endpoints
+# black==23.11.0  # Code formatting
+# flake8==6.1.0  # Linting
 
 # ============ Optional Dependencies ============
 # Uncomment if needed:
