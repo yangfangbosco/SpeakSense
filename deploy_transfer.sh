@@ -224,7 +224,7 @@ echo ""
 
 # 在远程创建目录结构
 echo "5. 在远程服务器创建目录..."
-ssh ${REMOTE} "mkdir -p ${REMOTE_PATH}/{models,third_party,services,portal,shared,logs,config} ~/.cache/huggingface"
+ssh ${REMOTE} "mkdir -p ${REMOTE_PATH}/{models/{CosyVoice2-0.5B,embedding,silero-vad,faster-whisper-base},third_party,services,portal,shared,logs,config} ~/.cache/huggingface"
 echo -e "${GREEN}✓ 目录创建完成${NC}"
 echo ""
 
