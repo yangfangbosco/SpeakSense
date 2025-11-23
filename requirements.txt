@@ -14,8 +14,8 @@ websockets==12.0  # WebSocket support for streaming audio
 faster-whisper==1.2.1
 # Silero-VAD: Voice Activity Detection for automatic speech segmentation
 silero-vad==6.2.0
-# Legacy support (can be removed after migration)
-# openai-whisper==20231117
+# OpenAI Whisper: Required by CosyVoice2 for audio processing
+openai-whisper==20231117
 
 # ============ Text Processing ============
 jieba==0.42.1  # Chinese word segmentation
