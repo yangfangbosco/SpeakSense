@@ -136,14 +136,6 @@ else
     echo -e "${GREEN}✓ models/CosyVoice2-0.5B ($SIZE)${NC}"
 fi
 
-if [ ! -d "models/wetext" ]; then
-    echo -e "${RED}✗ models/wetext 不存在${NC}"
-    MISSING_FILES=1
-else
-    SIZE=$(du -sh models/wetext | cut -f1)
-    echo -e "${GREEN}✓ models/wetext ($SIZE)${NC}"
-fi
-
 if [ ! -d "models/embedding/bge-small-zh-v1.5" ]; then
     echo -e "${RED}✗ models/embedding/bge-small-zh-v1.5 不存在${NC}"
     MISSING_FILES=1
@@ -158,13 +150,6 @@ if [ ! -d "third_party/CosyVoice" ]; then
 else
     SIZE=$(du -sh third_party/CosyVoice | cut -f1)
     echo -e "${GREEN}✓ third_party/CosyVoice ($SIZE)${NC}"
-fi
-
-if [ ! -d "$HOME/.cache/whisper" ]; then
-    echo -e "${YELLOW}⚠ ~/.cache/whisper 不存在${NC}"
-else
-    SIZE=$(du -sh ~/.cache/whisper | cut -f1)
-    echo -e "${GREEN}✓ ~/.cache/whisper ($SIZE)${NC}"
 fi
 
 if [ ! -d "$HOME/.cache/huggingface" ]; then
@@ -210,14 +195,10 @@ echo "4. 传输计划："
 echo "   将传输/同步以下内容："
 echo "   - 项目代码（所有源文件和脚本）"
 echo "   - models/CosyVoice2-0.5B/ (约 4.8GB)"
-echo "   - models/wetext/ (约 13MB)"
 echo "   - models/embedding/bge-small-zh-v1.5/ (约 182MB)"
 echo "   - models/silero-vad/ (约 25MB, 语音检测)"
 echo "   - models/faster-whisper-base/ (约 150MB, ASR加速)"
 echo "   - third_party/CosyVoice/ (约 71MB)"
-if [ -d "$HOME/.cache/whisper" ]; then
-    echo "   - ~/.cache/whisper/ (约 1.6GB)"
-fi
 if [ -d "$HOME/.cache/huggingface" ]; then
     echo "   - ~/.cache/huggingface/ (约 1.7GB, 可选)"
 fi
@@ -243,7 +224,7 @@ echo ""
 
 # 在远程创建目录结构
 echo "5. 在远程服务器创建目录..."
-ssh ${REMOTE} "mkdir -p ${REMOTE_PATH}/{models,third_party,services,portal,shared,logs,config} ~/.cache/{whisper,huggingface}"
+ssh ${REMOTE} "mkdir -p ${REMOTE_PATH}/{models,third_party,services,portal,shared,logs,config} ~/.cache/huggingface"
 echo -e "${GREEN}✓ 目录创建完成${NC}"
 echo ""
 
@@ -286,45 +267,35 @@ rsync ${RSYNC_OPTS} models/CosyVoice2-0.5B/ ${REMOTE}:${REMOTE_PATH}/models/Cosy
 echo -e "${GREEN}✓ CosyVoice2 模型同步完成${NC}"
 echo ""
 
-echo "   [2/4] 正在同步 models/wetext/..."
-rsync ${RSYNC_OPTS} models/wetext/ ${REMOTE}:${REMOTE_PATH}/models/wetext/
-echo -e "${GREEN}✓ wetext 模型同步完成${NC}"
-echo ""
-
-echo "   [3/4] 正在同步 models/embedding/bge-small-zh-v1.5/..."
+echo "   [2/5] 正在同步 models/embedding/bge-small-zh-v1.5/..."
 rsync ${RSYNC_OPTS} models/embedding/bge-small-zh-v1.5/ ${REMOTE}:${REMOTE_PATH}/models/embedding/bge-small-zh-v1.5/
 echo -e "${GREEN}✓ BGE Embedding 模型同步完成${NC}"
 echo ""
 
-echo "   [4/6] 正在同步 models/silero-vad/..."
+echo "   [3/5] 正在同步 models/silero-vad/..."
 rsync ${RSYNC_OPTS} models/silero-vad/ ${REMOTE}:${REMOTE_PATH}/models/silero-vad/
 echo -e "${GREEN}✓ Silero-VAD 模型同步完成${NC}"
 echo ""
 
-echo "   [5/6] 正在同步 models/faster-whisper-base/..."
+echo "   [4/5] 正在同步 models/faster-whisper-base/..."
 rsync ${RSYNC_OPTS} models/faster-whisper-base/ ${REMOTE}:${REMOTE_PATH}/models/faster-whisper-base/
 echo -e "${GREEN}✓ Faster-Whisper Base 模型同步完成${NC}"
 echo ""
 
-echo "   [6/6] 正在同步 third_party/CosyVoice/..."
+echo "   [5/5] 正在同步 third_party/CosyVoice/..."
 rsync ${RSYNC_OPTS} third_party/CosyVoice/ ${REMOTE}:${REMOTE_PATH}/third_party/CosyVoice/
 echo -e "${GREEN}✓ CosyVoice 代码同步完成${NC}"
 echo ""
 
-# 传输缓存模型
+# 传输缓存模型（可选）
 echo "9. 同步缓存模型到用户目录..."
-if [ -d "$HOME/.cache/whisper" ]; then
-    echo "   [1/2] 正在同步 Whisper 模型..."
-    rsync ${RSYNC_OPTS} ~/.cache/whisper/ ${REMOTE}:~/.cache/whisper/
-    echo -e "${GREEN}✓ Whisper 模型同步完成${NC}"
-    echo ""
-fi
-
 if [ -d "$HOME/.cache/huggingface" ]; then
-    echo "   [2/2] 正在同步 HuggingFace 模型..."
+    echo "   正在同步 HuggingFace 模型缓存（可选）..."
     rsync ${RSYNC_OPTS} ~/.cache/huggingface/ ${REMOTE}:~/.cache/huggingface/
-    echo -e "${GREEN}✓ HuggingFace 模型同步完成${NC}"
+    echo -e "${GREEN}✓ HuggingFace 缓存同步完成${NC}"
     echo ""
+else
+    echo -e "${YELLOW}⚠ HuggingFace 缓存不存在，跳过${NC}"
 fi
 
 # 传输环境构建脚本
