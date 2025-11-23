@@ -298,37 +298,36 @@ else
     echo -e "${YELLOW}⚠ HuggingFace 缓存不存在，跳过${NC}"
 fi
 
-# 传输环境构建脚本
-echo "10. 传输环境构建脚本..."
-if [ -f "deploy_setup.sh" ]; then
-    scp deploy_setup.sh ${REMOTE}:${REMOTE_PATH}/
-    ssh ${REMOTE} "chmod +x ${REMOTE_PATH}/deploy_setup.sh"
-    echo -e "${GREEN}✓ 环境构建脚本已上传${NC}"
-else
-    echo -e "${YELLOW}⚠ deploy_setup.sh 不存在，跳过${NC}"
-fi
-echo ""
-
 echo "============================================================"
 echo -e "${GREEN}✓ 数据同步完成！${NC}"
 echo "============================================================"
 echo ""
 echo "下一步：在远程服务器上构建环境"
 echo ""
-echo "方式 1：SSH 登录后手动执行"
-echo "  ssh ${REMOTE}"
-echo "  cd ${REMOTE_PATH}"
-echo "  ./deploy_setup.sh"
+echo "环境构建步骤："
+echo "1. SSH 登录到服务器："
+echo "   ssh ${REMOTE}"
 echo ""
-echo "方式 2：本地直接执行（推荐）"
-echo "  ssh -t ${REMOTE} 'cd ${REMOTE_PATH} && ./deploy_setup.sh'"
+echo "2. 进入项目目录："
+echo "   cd ${REMOTE_PATH}"
+echo ""
+echo "3. 运行环境构建脚本："
+echo "   ./recreate_conda_env.sh"
+echo ""
+echo "4. 启动服务："
+echo "   ./run_all_services.sh"
+echo ""
+echo "提示："
+echo "- recreate_conda_env.sh 会创建 conda 环境并安装所有依赖"
+echo "- 首次运行需要 10-20 分钟下载和安装包"
+echo "- 安装完成后使用 run_all_services.sh 启动所有服务"
 echo ""
 read -p "是否现在在远程服务器上执行环境构建？(y/n) " -n 1 -r
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "开始在远程服务器上构建环境..."
-    ssh -t ${REMOTE} "cd ${REMOTE_PATH} && ./deploy_setup.sh"
+    ssh -t ${REMOTE} "cd ${REMOTE_PATH} && ./recreate_conda_env.sh"
 else
     echo ""
     echo "请稍后手动执行环境构建脚本"
