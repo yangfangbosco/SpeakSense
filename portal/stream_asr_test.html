@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeakSense - 流式语音识别测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .status-idle {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-speaking {
+            background: #fff3e0;
+            color: #f57c00;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-transcribing {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-start {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .result {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 100px;
+            margin-bottom: 20px;
+        }
+
+        .result-text {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .result-meta {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #fafafa;
+            border-left: 3px solid #667eea;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .history-item .text {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-item .time {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .info {
+            background: #e8f5e9;
+            border-left: 3px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .info-title {
+            font-weight: 500;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+
+        .info-text {
+            color: #1b5e20;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 流式语音识别测试</h1>
+        <p class="subtitle">Faster-whisper + Silero-VAD 自动断句</p>
+
+        <div id="status" class="status-indicator status-idle">
+            准备就绪
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn-start" onclick="startRecording()">
+                开始录音
+            </button>
+            <button id="stopBtn" class="btn-stop" onclick="stopRecording()" disabled>
+                停止录音
+            </button>
+        </div>
+
+        <div class="result">
+            <div class="result-text" id="resultText">
+                点击"开始录音"按钮，开始说话。系统会自动检测你何时停止说话，并自动转写。
+            </div>
+            <div class="result-meta" id="resultMeta"></div>
+        </div>
+
+        <h3 style="margin-bottom: 10px; color: #333;">转写历史</h3>
+        <div class="history" id="history"></div>
+
+        <div class="info">
+            <div class="info-title">💡 使用说明</div>
+            <div class="info-text">
+                1. 点击"开始录音"，允许浏览器访问麦克风<br>
+                2. 开始说话，系统会显示"正在说话"状态<br>
+                3. 停止说话并保持安静1秒，系统自动转写<br>
+                4. 转写完成后自动继续监听下一段语音<br>
+                5. 点击"停止录音"结束会话
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let websocket = null;
+        let audioContext = null;
+        let recordingHistory = [];
+
+        const statusDiv = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultText = document.getElementById('resultText');
+        const resultMeta = document.getElementById('resultMeta');
+        const historyDiv = document.getElementById('history');
+
+        function updateStatus(status, message) {
+            statusDiv.className = `status-indicator status-${status}`;
+            statusDiv.textContent = message;
+        }
+
+        function addToHistory(text, language) {
+            const item = {
+                text: text,
+                language: language,
+                time: new Date().toLocaleTimeString()
+            };
+            recordingHistory.unshift(item);
+
+            // Update history display
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            historyDiv.innerHTML = recordingHistory.map(item => `
+                <div class="history-item">
+                    <div class="text">${item.text}</div>
+                    <div class="time">${item.time} · ${item.language}</div>
+                </div>
+            `).join('');
+        }
+
+        async function startRecording() {
+            try {
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+
+                // Create audio context for processing
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
+                });
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                // Connect WebSocket
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.hostname}:8001/asr/stream`;
+                websocket = new WebSocket(wsUrl);
+
+                websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    updateStatus('idle', '已连接 - 请开始说话');
+                };
+
+                websocket.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    console.log('Received:', message);
+
+                    if (message.type === 'status') {
+                        if (message.status === 'speaking') {
+                            updateStatus('speaking', '🎤 正在说话...');
+                        } else if (message.status === 'transcribing') {
+                            updateStatus('transcribing', '⚙️ 正在转写...');
+                        }
+                    } else if (message.type === 'result') {
+                        updateStatus('idle', '✓ 转写完成 - 继续说话');
+                        resultText.textContent = message.text;
+                        resultMeta.textContent = `语言: ${message.language}`;
+
+                        // Add to history
+                        addToHistory(message.text, message.language);
+                    } else if (message.type === 'error') {
+                        updateStatus('idle', '❌ 错误: ' + message.message);
+                        resultText.textContent = '错误: ' + message.message;
+                    }
+                };
+
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateStatus('idle', '❌ 连接错误');
+                };
+
+                websocket.onclose = () => {
+                    console.log('WebSocket closed');
+                    updateStatus('idle', '连接已关闭');
+                };
+
+                // Process audio and send to server
+                processor.onaudioprocess = (e) => {
+                    if (websocket && websocket.readyState === WebSocket.OPEN) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+
+                        // Convert float32 to int16
+                        const int16Data = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            const s = Math.max(-1, Math.min(1, inputData[i]));
+                            int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        }
+
+                        // Send to server as base64
+                        const base64Data = btoa(String.fromCharCode.apply(null, new Uint8Array(int16Data.buffer)));
+                        websocket.send(JSON.stringify({
+                            type: 'audio',
+                            data: base64Data
+                        }));
+                    }
+                };
+
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                // Update UI
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                // Store for cleanup
+                window.audioStream = stream;
+                window.audioProcessor = processor;
+                window.audioSource = source;
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                updateStatus('idle', '❌ 无法访问麦克风');
+                alert('无法访问麦克风: ' + error.message);
+            }
+        }
+
+        function stopRecording() {
+            // Close WebSocket
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+
+            // Stop audio
+            if (window.audioProcessor) {
+                window.audioProcessor.disconnect();
+            }
+            if (window.audioSource) {
+                window.audioSource.disconnect();
+            }
+            if (window.audioStream) {
+                window.audioStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            // Update UI
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('idle', '已停止');
+            resultText.textContent = '录音已停止';
+            resultMeta.textContent = '';
+        }
+    </script>
+</body>
+</html>

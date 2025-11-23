@@ -171,7 +171,7 @@ async def websocket_streaming_asr(websocket: WebSocket):
         sample_rate=16000,
         threshold=0.5,
         min_speech_duration_ms=250,
-        min_silence_duration_ms=800,  # 0.8s silence triggers transcription
+        min_silence_duration_ms=1000,  # 1.0s silence triggers transcription
         speech_pad_ms=30
     )
 
