@@ -34,11 +34,8 @@ data/chromadb/
 *.db
 *.sqlite3
 
-# Models (large files)
+# Models (large files, deployed via rsync)
 models/
-# Exception: Include models needed for offline deployment
-!models/silero-vad/
-!models/faster-whisper-base/
 
 # Portal configuration backups
 portal/assets/js/app.js.original
