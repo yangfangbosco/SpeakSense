@@ -301,6 +301,7 @@
                             updateStatus('transcribing', '⚙️ 正在转写...');
                         }
                     } else if (message.type === 'result') {
+                        console.log('收到转写结果，准备自动停止录音');
                         updateStatus('idle', '✓ 转写完成');
                         resultText.textContent = message.text;
                         resultMeta.textContent = `语言: ${message.language}`;
@@ -309,8 +310,11 @@
                         addToHistory(message.text, message.language);
 
                         // Auto-stop recording after transcription
+                        console.log('设置500ms后自动停止');
                         setTimeout(() => {
+                            console.log('执行自动停止录音...');
                             stopRecording();
+                            console.log('stopRecording()已调用');
                         }, 500);  // Wait 500ms to show result, then stop
                     } else if (message.type === 'error') {
                         updateStatus('idle', '❌ 错误: ' + message.message);
@@ -369,23 +373,34 @@
         }
 
         function stopRecording() {
+            console.log('[stopRecording] 开始执行停止录音流程');
+
             // Close WebSocket
             if (websocket) {
+                console.log('[stopRecording] 关闭 WebSocket');
                 websocket.close();
                 websocket = null;
             }
 
             // Stop audio
             if (window.audioProcessor) {
+                console.log('[stopRecording] 断开 audioProcessor');
                 window.audioProcessor.disconnect();
             }
             if (window.audioSource) {
+                console.log('[stopRecording] 断开 audioSource');
                 window.audioSource.disconnect();
             }
             if (window.audioStream) {
-                window.audioStream.getTracks().forEach(track => track.stop());
+                console.log('[stopRecording] 停止所有音频轨道');
+                window.audioStream.getTracks().forEach(track => {
+                    console.log(`[stopRecording] 停止轨道: ${track.kind}, state: ${track.readyState}`);
+                    track.stop();
+                    console.log(`[stopRecording] 轨道停止后状态: ${track.readyState}`);
+                });
             }
             if (audioContext) {
+                console.log('[stopRecording] 关闭 audioContext');
                 audioContext.close();
                 audioContext = null;
             }
@@ -396,6 +411,8 @@
             updateStatus('idle', '已停止');
             resultText.textContent = '录音已停止';
             resultMeta.textContent = '';
+
+            console.log('[stopRecording] 停止录音流程完成');
         }
     </script>
 </body>
