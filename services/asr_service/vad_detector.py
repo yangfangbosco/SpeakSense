@@ -178,22 +178,45 @@ class VADDetector:
 
             # Check for session end (long pause)
             if silence_duration_ms >= self.min_silence_for_session_ms:
-                logger.info(f"Session ended after {silence_duration_ms:.0f}ms of silence")
-                complete_audio = np.concatenate(self.audio_buffer)
-                session_ended = True
-                sentence_ended = True  # Session end implies sentence end
-                self.reset()
+                # Session end should always trigger after long silence, regardless of buffer content
+                # If buffer has valid audio, transcribe it; otherwise just end the session
+                if len(self.audio_buffer) > 0:
+                    total_samples = sum(len(chunk) for chunk in self.audio_buffer)
+                    audio_duration_ms = (total_samples / self.sample_rate) * 1000
+
+                    if audio_duration_ms >= self.min_speech_duration_ms:
+                        logger.info(f"Session ended after {silence_duration_ms:.0f}ms of silence, audio duration: {audio_duration_ms:.0f}ms")
+                        complete_audio = np.concatenate(self.audio_buffer)
+                        session_ended = True
+                        sentence_ended = True  # Session end implies sentence end
+                    else:
+                        logger.info(f"Session ended after {silence_duration_ms:.0f}ms of silence (audio too short, not transcribing)")
+                        session_ended = True  # Still end session even if audio too short
+                else:
+                    logger.info(f"Session ended after {silence_duration_ms:.0f}ms of silence (no audio in buffer)")
+                    session_ended = True  # End session even with empty buffer
+
+                self.reset()  # Always reset after session end
 
             # Check for sentence end (short pause)
             elif silence_duration_ms >= self.min_silence_for_sentence_ms:
-                logger.info(f"Sentence ended after {silence_duration_ms:.0f}ms of silence")
-                complete_audio = np.concatenate(self.audio_buffer)
-                sentence_ended = True
-                # Don't reset state - continue accumulating for potential session end
-                # But clear the buffer for next sentence
-                self.audio_buffer = []
-                self.silence_start_sample = None
-                # Keep is_speaking = True to continue monitoring
+                # Only trigger if we have enough audio to transcribe (prevent repeated triggers and noise-only audio)
+                if len(self.audio_buffer) > 0:
+                    total_samples = sum(len(chunk) for chunk in self.audio_buffer)
+                    audio_duration_ms = (total_samples / self.sample_rate) * 1000
+
+                    if audio_duration_ms >= self.min_speech_duration_ms:
+                        logger.info(f"Sentence ended after {silence_duration_ms:.0f}ms of silence, audio duration: {audio_duration_ms:.0f}ms")
+                        complete_audio = np.concatenate(self.audio_buffer)
+                        sentence_ended = True
+                        # Clear buffer for next sentence but DON'T reset silence timer
+                        # This allows session_end timer to continue counting toward session end
+                        self.audio_buffer = []
+                        # DO NOT reset silence_start_sample! Let it continue for session end detection
+                        # Keep is_speaking = True to continue monitoring
+                    else:
+                        logger.debug(f"Skipping sentence end - audio too short ({audio_duration_ms:.0f}ms < {self.min_speech_duration_ms}ms)")
+                        self.audio_buffer = []  # Clear the buffer but don't trigger transcription
 
         return self.is_speaking, sentence_ended, session_ended, complete_audio
 

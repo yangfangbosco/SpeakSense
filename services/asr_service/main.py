@@ -234,7 +234,8 @@ async def websocket_streaming_asr(websocket: WebSocket):
 
                 # If sentence or session ended, transcribe it
                 if sentence_ended and complete_audio is not None:
-                    logger.info(f"Speech segment ended, transcribing {len(complete_audio)} samples...")
+                    audio_duration_sec = len(complete_audio) / 16000
+                    logger.info(f"Speech segment ended, transcribing {len(complete_audio)} samples ({audio_duration_sec:.2f}s)...")
 
                     # Send transcribing status
                     await websocket.send_json({
@@ -267,18 +268,24 @@ async def websocket_streaming_asr(websocket: WebSocket):
                         # Clean up temp file
                         os.remove(temp_path)
 
-                        # Send result with session_ended flag
-                        await websocket.send_json({
-                            "type": "result",
-                            "text": result['text'],
-                            "language": result.get('language', 'unknown'),
-                            "session_ended": session_ended  # Tell client if this is the final result
-                        })
+                        # Only send result if we got actual text (filter out empty/whitespace-only results)
+                        transcribed_text = result['text'].strip()
+                        if transcribed_text:
+                            # Send result with session_ended flag
+                            await websocket.send_json({
+                                "type": "result",
+                                "text": transcribed_text,
+                                "language": result.get('language', 'unknown'),
+                                "session_ended": session_ended  # Tell client if this is the final result
+                            })
 
-                        if session_ended:
-                            logger.info(f"Session ended. Final transcription: {result['text']}")
+                            if session_ended:
+                                logger.info(f"Session ended. Final transcription: {transcribed_text}")
+                            else:
+                                logger.info(f"Sentence transcribed: {transcribed_text}")
                         else:
-                            logger.info(f"Sentence transcribed: {result['text']}")
+                            logger.warning(f"Whisper returned empty transcription, skipping result")
+                            # Don't send empty results to client
 
                     except Exception as e:
                         logger.error(f"Transcription error: {e}")
@@ -286,6 +293,14 @@ async def websocket_streaming_asr(websocket: WebSocket):
                             "type": "error",
                             "message": f"Transcription failed: {str(e)}"
                         })
+
+                # If session ended but no audio to transcribe, still notify frontend
+                elif session_ended and complete_audio is None:
+                    logger.info("Session ended without audio to transcribe, notifying client")
+                    await websocket.send_json({
+                        "type": "session_end",
+                        "message": "Session ended due to prolonged silence"
+                    })
 
             elif message.get("type") == "reset":
                 # Reset VAD state

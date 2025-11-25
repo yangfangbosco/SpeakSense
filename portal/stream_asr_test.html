@@ -311,21 +311,25 @@
         function updateThreshold(value) {
             vadConfig.threshold = parseFloat(value);
             document.getElementById('thresholdValue').textContent = value;
+            console.log('[Config] Threshold updated to:', value);
         }
 
         function updateMinSpeech(value) {
             vadConfig.min_speech_duration_ms = parseInt(value);
             document.getElementById('minSpeechValue').textContent = value + 'ms';
+            console.log('[Config] Min speech duration updated to:', value + 'ms');
         }
 
         function updateSentence(value) {
             vadConfig.min_silence_for_sentence_ms = parseInt(value);
             document.getElementById('sentenceValue').textContent = value + 'ms';
+            console.log('[Config] Sentence pause updated to:', value + 'ms');
         }
 
         function updateSession(value) {
             vadConfig.min_silence_for_session_ms = parseInt(value);
             document.getElementById('sessionValue').textContent = value + 'ms';
+            console.log('[Config] Session end updated to:', value + 'ms');
         }
 
         function updateStatus(status, message) {
@@ -428,6 +432,16 @@
                             updateStatus('idle', '✓ 转写完成 - 继续说话');
                             // Don't stop - keep listening for next sentence
                         }
+                    } else if (message.type === 'session_end') {
+                        console.log('会话结束（无音频转写）:', message.message);
+                        updateStatus('idle', '✓ 会话结束');
+
+                        // Auto-stop recording after session end
+                        setTimeout(() => {
+                            console.log('执行自动停止录音...');
+                            stopRecording();
+                            console.log('stopRecording()已调用');
+                        }, 500);
                     } else if (message.type === 'error') {
                         updateStatus('idle', '❌ 错误: ' + message.message);
                         resultText.textContent = '错误: ' + message.message;
