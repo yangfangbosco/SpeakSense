@@ -26,7 +26,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             padding: 40px;
-            max-width: 900px;
+            max-width: 600px;
             width: 100%;
         }
 
@@ -41,24 +41,6 @@
             color: #666;
             margin-bottom: 30px;
             font-size: 14px;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .left-panel, .right-panel {
-            display: flex;
-            flex-direction: column;
         }
 
         .status-indicator {
@@ -98,7 +80,7 @@
             margin-bottom: 20px;
         }
 
-        .btn {
+        button {
             flex: 1;
             padding: 15px;
             border: none;
@@ -109,7 +91,7 @@
             transition: all 0.3s;
         }
 
-        .btn:disabled {
+        button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
@@ -122,7 +104,7 @@
         .btn-start:hover:not(:disabled) {
             background: #45a049;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .btn-stop {
@@ -133,91 +115,37 @@
         .btn-stop:hover:not(:disabled) {
             background: #da190b;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .result {
             background: #f5f5f5;
-            padding: 20px;
             border-radius: 10px;
+            padding: 20px;
+            min-height: 100px;
             margin-bottom: 20px;
         }
 
-        .result-label {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
         .result-text {
-            font-size: 18px;
             color: #333;
+            font-size: 16px;
             line-height: 1.6;
-            min-height: 60px;
+            margin-bottom: 10px;
         }
 
         .result-meta {
-            font-size: 12px;
-            color: #999;
-            margin-top: 10px;
-        }
-
-        .log-panel {
-            background: #1e1e1e;
-            border-radius: 10px;
-            padding: 15px;
-            height: 400px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-        }
-
-        .log-title {
-            color: #4caf50;
-            font-weight: bold;
-            margin-bottom: 10px;
+            color: #666;
             font-size: 14px;
         }
 
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 5px;
-            border-left: 2px solid transparent;
-            padding-left: 8px;
-        }
-
-        .log-entry.log-info {
-            color: #64b5f6;
-            border-left-color: #64b5f6;
-        }
-
-        .log-entry.log-success {
-            color: #81c784;
-            border-left-color: #81c784;
-        }
-
-        .log-entry.log-warning {
-            color: #ffb74d;
-            border-left-color: #ffb74d;
-        }
-
-        .log-entry.log-error {
-            color: #e57373;
-            border-left-color: #e57373;
-        }
-
-        .log-time {
-            color: #9e9e9e;
-            margin-right: 8px;
-        }
-
         .history {
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
         }
 
         .history-item {
-            background: #f5f5f5;
+            background: #fafafa;
+            border-left: 3px solid #667eea;
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
@@ -252,72 +180,44 @@
             font-size: 14px;
             line-height: 1.5;
         }
-
-        .btn-clear-log {
-            background: #757575;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-
-        .btn-clear-log:hover {
-            background: #616161;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎤 流式语音识别测试</h1>
-        <p class="subtitle">Whisper + Silero-VAD 自动断句 (带详细时间日志)</p>
+        <p class="subtitle">Faster-whisper + Silero-VAD 自动断句</p>
 
-        <div class="main-content">
-            <div class="left-panel">
-                <div id="status" class="status-indicator status-idle">
-                    准备就绪
-                </div>
-
-                <div class="controls">
-                    <button id="startBtn" class="btn btn-start" onclick="startRecording()">
-                        开始录音
-                    </button>
-                    <button id="stopBtn" class="btn btn-stop" onclick="stopRecording()" disabled>
-                        停止录音
-                    </button>
-                </div>
-
-                <div class="result">
-                    <div class="result-label">📝 最新转写结果:</div>
-                    <div class="result-text" id="resultText">
-                        点击"开始录音"按钮开始测试
-                    </div>
-                    <div class="result-meta" id="resultMeta"></div>
-                </div>
-
-                <h3 style="margin-bottom: 10px; color: #333;">转写历史</h3>
-                <div class="history" id="history"></div>
-            </div>
-
-            <div class="right-panel">
-                <button class="btn-clear-log" onclick="clearLog()">清空日志</button>
-                <div class="log-panel">
-                    <div class="log-title">⏱️ 实时日志 (毫秒级时间戳)</div>
-                    <div id="logContent"></div>
-                </div>
-            </div>
+        <div id="status" class="status-indicator status-idle">
+            准备就绪
         </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn-start" onclick="startRecording()">
+                开始录音
+            </button>
+            <button id="stopBtn" class="btn-stop" onclick="stopRecording()" disabled>
+                停止录音
+            </button>
+        </div>
+
+        <div class="result">
+            <div class="result-text" id="resultText">
+                点击"开始录音"按钮，开始说话。系统会自动检测你何时停止说话，并自动转写。
+            </div>
+            <div class="result-meta" id="resultMeta"></div>
+        </div>
+
+        <h3 style="margin-bottom: 10px; color: #333;">转写历史</h3>
+        <div class="history" id="history"></div>
 
         <div class="info">
             <div class="info-title">💡 使用说明</div>
             <div class="info-text">
                 1. 点击"开始录音"，允许浏览器访问麦克风<br>
-                2. 开始说话，右侧日志会显示"检测到语音"<br>
-                3. 停止说话并保持安静0.8秒，系统显示"检测到停顿"并开始转写<br>
-                4. 转写完成后自动继续监听下一段语音<br>
-                5. 右侧日志显示每个事件的精确时间戳
+                2. 开始说话，系统会显示"正在说话"状态<br>
+                3. 停止说话并保持安静1秒，系统自动转写<br>
+                4. 转写完成后自动关闭麦克风，结束录音<br>
+                5. 如需再次录音，重新点击"开始录音"
             </div>
         </div>
     </div>
@@ -327,8 +227,6 @@
         let websocket = null;
         let audioContext = null;
         let recordingHistory = [];
-        let sessionStartTime = null;
-        let lastSpeechDetectedTime = null;
 
         const statusDiv = document.getElementById('status');
         const startBtn = document.getElementById('startBtn');
@@ -336,40 +234,6 @@
         const resultText = document.getElementById('resultText');
         const resultMeta = document.getElementById('resultMeta');
         const historyDiv = document.getElementById('history');
-        const logContent = document.getElementById('logContent');
-
-        function getTimestamp() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const ms = String(now.getMilliseconds()).padStart(3, '0');
-            return `${hours}:${minutes}:${seconds}.${ms}`;
-        }
-
-        function getElapsedTime() {
-            if (!sessionStartTime) return '0.000s';
-            const elapsed = (Date.now() - sessionStartTime) / 1000;
-            return `${elapsed.toFixed(3)}s`;
-        }
-
-        function addLog(message, type = 'info') {
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${type}`;
-
-            const timestamp = getTimestamp();
-            const elapsed = getElapsedTime();
-
-            logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span><span class="log-time">[+${elapsed}]</span> ${message}`;
-
-            logContent.appendChild(logEntry);
-            logContent.scrollTop = logContent.scrollHeight;
-        }
-
-        function clearLog() {
-            logContent.innerHTML = '<div class="log-title">⏱️ 实时日志 (毫秒级时间戳)</div>';
-            addLog('日志已清空', 'info');
-        }
 
         function updateStatus(status, message) {
             statusDiv.className = `status-indicator status-${status}`;
@@ -385,22 +249,20 @@
             recordingHistory.unshift(item);
 
             // Update history display
-            historyDiv.innerHTML = recordingHistory.slice(0, 5).map(item => `
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            historyDiv.innerHTML = recordingHistory.map(item => `
                 <div class="history-item">
                     <div class="text">${item.text}</div>
-                    <div class="time">${item.time} - ${item.language}</div>
+                    <div class="time">${item.time} · ${item.language}</div>
                 </div>
             `).join('');
         }
 
         async function startRecording() {
             try {
-                addLog('🎬 用户点击"开始录音"按钮', 'info');
-                sessionStartTime = Date.now();
-
-                updateStatus('idle', '正在请求麦克风权限...');
-                addLog('🎤 正在请求麦克风访问权限...', 'info');
-
                 // Request microphone access
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: {
@@ -411,81 +273,64 @@
                     }
                 });
 
-                addLog('✓ 麦克风权限已获取', 'success');
-
-                // Create audio context
+                // Create audio context for processing
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({
                     sampleRate: 16000
                 });
-                addLog(`✓ 音频上下文已创建 (采样率: ${audioContext.sampleRate}Hz)`, 'success');
-
                 const source = audioContext.createMediaStreamSource(stream);
                 const processor = audioContext.createScriptProcessor(4096, 1, 1);
-                addLog('✓ 音频处理器已创建 (缓冲区: 4096 样本)', 'success');
 
                 // Connect WebSocket
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsUrl = `${protocol}//${window.location.hostname}:8001/asr/stream`;
-                addLog(`🔌 正在连接 WebSocket: ${wsUrl}`, 'info');
-
                 websocket = new WebSocket(wsUrl);
 
                 websocket.onopen = () => {
-                    addLog('✓ WebSocket 连接成功', 'success');
-                    updateStatus('idle', '✓ 已连接 - 请开始说话');
-                    addLog('👂 开始监听语音输入...', 'info');
+                    console.log('WebSocket connected');
+                    updateStatus('idle', '已连接 - 请开始说话');
                 };
 
                 websocket.onmessage = (event) => {
                     const message = JSON.parse(event.data);
+                    console.log('Received:', message);
 
                     if (message.type === 'status') {
                         if (message.status === 'speaking') {
-                            if (!lastSpeechDetectedTime) {
-                                lastSpeechDetectedTime = Date.now();
-                                addLog('🗣️ 检测到语音 - 用户开始说话', 'warning');
-                            }
                             updateStatus('speaking', '🎤 正在说话...');
                         } else if (message.status === 'transcribing') {
-                            const speechDuration = lastSpeechDetectedTime ?
-                                ((Date.now() - lastSpeechDetectedTime) / 1000).toFixed(2) : '?';
-                            addLog(`🔇 检测到停顿 (语音持续时间: ${speechDuration}秒)`, 'warning');
-                            addLog('⚙️ 开始转写音频...', 'info');
                             updateStatus('transcribing', '⚙️ 正在转写...');
-                            lastSpeechDetectedTime = null;
                         }
                     } else if (message.type === 'result') {
-                        const text = message.text || '(空结果)';
-                        addLog(`✓ 转写完成: "${text}" [语言: ${message.language}]`, 'success');
-                        updateStatus('idle', '✓ 转写完成 - 继续说话');
-                        resultText.textContent = text;
+                        console.log('收到转写结果，准备自动停止录音');
+                        updateStatus('idle', '✓ 转写完成');
+                        resultText.textContent = message.text;
                         resultMeta.textContent = `语言: ${message.language}`;
 
                         // Add to history
-                        if (text !== '(空结果)' && text.trim()) {
-                            addToHistory(text, message.language);
-                        }
+                        addToHistory(message.text, message.language);
 
-                        addLog('👂 继续监听下一段语音...', 'info');
+                        // Auto-stop recording after transcription
+                        console.log('设置500ms后自动停止');
+                        setTimeout(() => {
+                            console.log('执行自动停止录音...');
+                            stopRecording();
+                            console.log('stopRecording()已调用');
+                        }, 500);  // Wait 500ms to show result, then stop
                     } else if (message.type === 'error') {
-                        addLog(`❌ 错误: ${message.message}`, 'error');
                         updateStatus('idle', '❌ 错误: ' + message.message);
                         resultText.textContent = '错误: ' + message.message;
                     }
                 };
 
                 websocket.onerror = (error) => {
-                    addLog('❌ WebSocket 连接错误', 'error');
+                    console.error('WebSocket error:', error);
                     updateStatus('idle', '❌ 连接错误');
                 };
 
                 websocket.onclose = () => {
-                    addLog('🔌 WebSocket 连接已关闭', 'info');
+                    console.log('WebSocket closed');
                     updateStatus('idle', '连接已关闭');
                 };
-
-                let audioChunkCount = 0;
-                let lastLogTime = Date.now();
 
                 // Process audio and send to server
                 processor.onaudioprocess = (e) => {
@@ -505,23 +350,11 @@
                             type: 'audio',
                             data: base64Data
                         }));
-
-                        audioChunkCount++;
-
-                        // Log every 10 chunks (approximately every 2.5 seconds)
-                        if (audioChunkCount % 10 === 0) {
-                            const now = Date.now();
-                            const interval = ((now - lastLogTime) / 1000).toFixed(2);
-                            addLog(`📡 已发送 ${audioChunkCount} 个音频块 (最近10块用时: ${interval}秒)`, 'info');
-                            lastLogTime = now;
-                        }
                     }
                 };
 
                 source.connect(processor);
                 processor.connect(audioContext.destination);
-
-                addLog('▶️ 音频流处理已启动', 'success');
 
                 // Update UI
                 startBtn.disabled = true;
@@ -533,56 +366,54 @@
                 window.audioSource = source;
 
             } catch (error) {
-                addLog(`❌ 启动录音失败: ${error.message}`, 'error');
+                console.error('Error starting recording:', error);
                 updateStatus('idle', '❌ 无法访问麦克风');
                 alert('无法访问麦克风: ' + error.message);
             }
         }
 
         function stopRecording() {
-            addLog('⏹️ 用户点击"停止录音"按钮', 'info');
+            console.log('[stopRecording] 开始执行停止录音流程');
 
             // Close WebSocket
             if (websocket) {
+                console.log('[stopRecording] 关闭 WebSocket');
                 websocket.close();
                 websocket = null;
             }
 
             // Stop audio
             if (window.audioProcessor) {
+                console.log('[stopRecording] 断开 audioProcessor');
                 window.audioProcessor.disconnect();
-                addLog('✓ 音频处理器已断开', 'success');
             }
             if (window.audioSource) {
+                console.log('[stopRecording] 断开 audioSource');
                 window.audioSource.disconnect();
-                addLog('✓ 音频源已断开', 'success');
             }
             if (window.audioStream) {
-                window.audioStream.getTracks().forEach(track => track.stop());
-                addLog('✓ 麦克风已释放', 'success');
+                console.log('[stopRecording] 停止所有音频轨道');
+                window.audioStream.getTracks().forEach(track => {
+                    console.log(`[stopRecording] 停止轨道: ${track.kind}, state: ${track.readyState}`);
+                    track.stop();
+                    console.log(`[stopRecording] 轨道停止后状态: ${track.readyState}`);
+                });
             }
             if (audioContext) {
+                console.log('[stopRecording] 关闭 audioContext');
                 audioContext.close();
                 audioContext = null;
-                addLog('✓ 音频上下文已关闭', 'success');
             }
 
             // Update UI
             startBtn.disabled = false;
             stopBtn.disabled = true;
-            updateStatus('idle', '已停止 - 点击"开始录音"重新开始');
+            updateStatus('idle', '已停止');
+            resultText.textContent = '录音已停止';
+            resultMeta.textContent = '';
 
-            const totalTime = getElapsedTime();
-            addLog(`🏁 录音会话结束 (总时长: ${totalTime})`, 'info');
-            addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
-
-            sessionStartTime = null;
-            lastSpeechDetectedTime = null;
+            console.log('[stopRecording] 停止录音流程完成');
         }
-
-        // Initialize
-        addLog('🚀 页面已加载，准备就绪', 'success');
-        addLog('💡 点击"开始录音"按钮开始测试', 'info');
     </script>
 </body>
 </html>
