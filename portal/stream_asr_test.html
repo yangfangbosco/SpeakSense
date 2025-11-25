@@ -216,8 +216,8 @@
                 1. 点击"开始录音"，允许浏览器访问麦克风<br>
                 2. 开始说话，系统会显示"正在说话"状态<br>
                 3. 停止说话并保持安静1秒，系统自动转写<br>
-                4. 转写完成后自动继续监听下一段语音<br>
-                5. 点击"停止录音"结束会话
+                4. 转写完成后自动关闭麦克风，结束录音<br>
+                5. 如需再次录音，重新点击"开始录音"
             </div>
         </div>
     </div>
@@ -301,12 +301,17 @@
                             updateStatus('transcribing', '⚙️ 正在转写...');
                         }
                     } else if (message.type === 'result') {
-                        updateStatus('idle', '✓ 转写完成 - 继续说话');
+                        updateStatus('idle', '✓ 转写完成');
                         resultText.textContent = message.text;
                         resultMeta.textContent = `语言: ${message.language}`;
 
                         // Add to history
                         addToHistory(message.text, message.language);
+
+                        // Auto-stop recording after transcription
+                        setTimeout(() => {
+                            stopRecording();
+                        }, 500);  // Wait 500ms to show result, then stop
                     } else if (message.type === 'error') {
                         updateStatus('idle', '❌ 错误: ' + message.message);
                         resultText.textContent = '错误: ' + message.message;
