@@ -167,10 +167,11 @@ async def websocket_streaming_asr(websocket: WebSocket):
     logger.info("WebSocket client connected")
 
     # Initialize VAD detector with intelligent sentence segmentation
+    # Higher threshold = less sensitive (reduces false positives from noise)
     vad = VADDetector(
         sample_rate=16000,
-        threshold=0.5,
-        min_speech_duration_ms=250,
+        threshold=0.6,  # Increased from 0.5 to reduce noise sensitivity
+        min_speech_duration_ms=400,  # Increased from 250ms to filter short noise bursts
         min_silence_for_sentence_ms=500,  # 0.5s pause triggers sentence end
         min_silence_for_session_ms=1500,  # 1.5s pause triggers session end
         speech_pad_ms=30
