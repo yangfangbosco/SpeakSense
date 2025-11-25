@@ -166,12 +166,13 @@ async def websocket_streaming_asr(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket client connected")
 
-    # Initialize VAD detector
+    # Initialize VAD detector with intelligent sentence segmentation
     vad = VADDetector(
         sample_rate=16000,
         threshold=0.5,
         min_speech_duration_ms=250,
-        min_silence_duration_ms=1000,  # 1.0s silence triggers transcription
+        min_silence_for_sentence_ms=500,  # 0.5s pause triggers sentence end
+        min_silence_for_session_ms=1500,  # 1.5s pause triggers session end
         speech_pad_ms=30
     )
 
@@ -188,18 +189,18 @@ async def websocket_streaming_asr(websocket: WebSocket):
                 # Convert bytes to numpy array (assuming int16 PCM)
                 audio_chunk = np.frombuffer(audio_data, dtype=np.int16)
 
-                # Process with VAD
-                is_speaking, speech_ended, complete_audio = vad.process_chunk(audio_chunk)
+                # Process with VAD (now returns 4 values)
+                is_speaking, sentence_ended, session_ended, complete_audio = vad.process_chunk(audio_chunk)
 
                 # Send status update
-                if is_speaking and not speech_ended:
+                if is_speaking and not sentence_ended:
                     await websocket.send_json({
                         "type": "status",
                         "status": "speaking"
                     })
 
-                # If speech segment ended, transcribe it
-                if speech_ended and complete_audio is not None:
+                # If sentence or session ended, transcribe it
+                if sentence_ended and complete_audio is not None:
                     logger.info(f"Speech segment ended, transcribing {len(complete_audio)} samples...")
 
                     # Send transcribing status
@@ -233,14 +234,18 @@ async def websocket_streaming_asr(websocket: WebSocket):
                         # Clean up temp file
                         os.remove(temp_path)
 
-                        # Send result
+                        # Send result with session_ended flag
                         await websocket.send_json({
                             "type": "result",
                             "text": result['text'],
-                            "language": result.get('language', 'unknown')
+                            "language": result.get('language', 'unknown'),
+                            "session_ended": session_ended  # Tell client if this is the final result
                         })
 
-                        logger.info(f"Transcription result: {result['text']}")
+                        if session_ended:
+                            logger.info(f"Session ended. Final transcription: {result['text']}")
+                        else:
+                            logger.info(f"Sentence transcribed: {result['text']}")
 
                     except Exception as e:
                         logger.error(f"Transcription error: {e}")

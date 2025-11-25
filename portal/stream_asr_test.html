@@ -213,11 +213,12 @@
         <div class="info">
             <div class="info-title">💡 使用说明</div>
             <div class="info-text">
-                1. 点击"开始录音"，允许浏览器访问麦克风<br>
-                2. 开始说话，系统会显示"正在说话"状态<br>
-                3. 停止说话并保持安静1秒，系统自动转写<br>
-                4. 转写完成后自动关闭麦克风，结束录音<br>
-                5. 如需再次录音，重新点击"开始录音"
+                <strong>🎯 智能分句模式</strong><br>
+                1. 点击"开始录音"开始<br>
+                2. 连续说多句话，每句话之间短暂停顿（0.5秒）<br>
+                3. 每句话会实时转写并显示<br>
+                4. 停止说话1.5秒后自动关闭麦克风<br>
+                5. 支持连续对话，无需每次重新开始
             </div>
         </div>
     </div>
@@ -301,21 +302,31 @@
                             updateStatus('transcribing', '⚙️ 正在转写...');
                         }
                     } else if (message.type === 'result') {
-                        console.log('收到转写结果，准备自动停止录音');
-                        updateStatus('idle', '✓ 转写完成');
-                        resultText.textContent = message.text;
-                        resultMeta.textContent = `语言: ${message.language}`;
+                        console.log('收到转写结果:', message);
 
                         // Add to history
                         addToHistory(message.text, message.language);
 
-                        // Auto-stop recording after transcription
-                        console.log('设置500ms后自动停止');
-                        setTimeout(() => {
-                            console.log('执行自动停止录音...');
-                            stopRecording();
-                            console.log('stopRecording()已调用');
-                        }, 500);  // Wait 500ms to show result, then stop
+                        // Update display
+                        resultText.textContent = message.text;
+                        resultMeta.textContent = `语言: ${message.language}`;
+
+                        // Check if session ended (long pause detected)
+                        if (message.session_ended) {
+                            console.log('会话结束（检测到1.5秒停顿），准备自动停止录音');
+                            updateStatus('idle', '✓ 转写完成 - 会话结束');
+
+                            // Auto-stop recording after session end
+                            setTimeout(() => {
+                                console.log('执行自动停止录音...');
+                                stopRecording();
+                                console.log('stopRecording()已调用');
+                            }, 500);
+                        } else {
+                            console.log('句子结束（检测到0.5秒停顿），继续监听下一句');
+                            updateStatus('idle', '✓ 转写完成 - 继续说话');
+                            // Don't stop - keep listening for next sentence
+                        }
                     } else if (message.type === 'error') {
                         updateStatus('idle', '❌ 错误: ' + message.message);
                         resultText.textContent = '错误: ' + message.message;

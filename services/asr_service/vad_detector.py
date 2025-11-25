@@ -23,23 +23,26 @@ class VADDetector:
         sample_rate: int = 16000,
         threshold: float = 0.5,
         min_speech_duration_ms: int = 250,
-        min_silence_duration_ms: int = 500,
+        min_silence_for_sentence_ms: int = 500,
+        min_silence_for_session_ms: int = 1500,
         speech_pad_ms: int = 30
     ):
         """
-        Initialize VAD detector
+        Initialize VAD detector with intelligent sentence segmentation
 
         Args:
             sample_rate: Audio sample rate (must be 8000 or 16000)
             threshold: Speech probability threshold (0.0-1.0)
             min_speech_duration_ms: Minimum speech duration to consider as speech
-            min_silence_duration_ms: Minimum silence duration to trigger speech end
+            min_silence_for_sentence_ms: Silence duration to trigger sentence end (e.g., 500ms)
+            min_silence_for_session_ms: Silence duration to trigger session end (e.g., 1500ms)
             speech_pad_ms: Padding to add before/after speech segments
         """
         self.sample_rate = sample_rate
         self.threshold = threshold
         self.min_speech_duration_ms = min_speech_duration_ms
-        self.min_silence_duration_ms = min_silence_duration_ms
+        self.min_silence_for_sentence_ms = min_silence_for_sentence_ms
+        self.min_silence_for_session_ms = min_silence_for_session_ms
         self.speech_pad_ms = speech_pad_ms
 
         # Load Silero-VAD model
@@ -101,18 +104,19 @@ class VADDetector:
     def process_chunk(
         self,
         audio_chunk: np.ndarray
-    ) -> Tuple[bool, bool, np.ndarray]:
+    ) -> Tuple[bool, bool, bool, np.ndarray]:
         """
-        Process audio chunk and detect speech/silence
+        Process audio chunk and detect speech/silence with intelligent segmentation
 
         Args:
             audio_chunk: Audio chunk as numpy array (int16 or float32)
 
         Returns:
-            Tuple of (is_speech_active, speech_ended, complete_audio)
+            Tuple of (is_speech_active, sentence_ended, session_ended, complete_audio)
             - is_speech_active: Whether speech is currently detected
-            - speech_ended: Whether a complete speech segment ended
-            - complete_audio: Complete audio segment if speech_ended, else None
+            - sentence_ended: Whether a sentence ended (short pause detected)
+            - session_ended: Whether the session ended (long pause detected)
+            - complete_audio: Complete audio segment if sentence/session ended, else None
         """
         # Convert to float32 if needed
         if audio_chunk.dtype == np.int16:
@@ -162,8 +166,9 @@ class VADDetector:
         elif self.is_speaking and speech_prob >= self.threshold:
             self.silence_start_sample = None
 
-        # Check if speech segment ended
-        speech_ended = False
+        # Check if speech segment ended (sentence or session)
+        sentence_ended = False
+        session_ended = False
         complete_audio = None
 
         if self.is_speaking and self.silence_start_sample is not None:
@@ -171,19 +176,26 @@ class VADDetector:
             silence_duration_samples = self.total_samples - self.silence_start_sample
             silence_duration_ms = (silence_duration_samples / self.sample_rate) * 1000
 
-            # Check if silence duration exceeds threshold
-            if silence_duration_ms >= self.min_silence_duration_ms:
-                # Speech segment ended
-                logger.debug(f"Speech ended after {silence_duration_ms:.0f}ms of silence")
-
-                # Collect complete audio segment
+            # Check for session end (long pause)
+            if silence_duration_ms >= self.min_silence_for_session_ms:
+                logger.info(f"Session ended after {silence_duration_ms:.0f}ms of silence")
                 complete_audio = np.concatenate(self.audio_buffer)
-                speech_ended = True
-
-                # Reset state
+                session_ended = True
+                sentence_ended = True  # Session end implies sentence end
                 self.reset()
 
-        return self.is_speaking, speech_ended, complete_audio
+            # Check for sentence end (short pause)
+            elif silence_duration_ms >= self.min_silence_for_sentence_ms:
+                logger.info(f"Sentence ended after {silence_duration_ms:.0f}ms of silence")
+                complete_audio = np.concatenate(self.audio_buffer)
+                sentence_ended = True
+                # Don't reset state - continue accumulating for potential session end
+                # But clear the buffer for next sentence
+                self.audio_buffer = []
+                self.silence_start_sample = None
+                # Keep is_speaking = True to continue monitoring
+
+        return self.is_speaking, sentence_ended, session_ended, complete_audio
 
     def get_speech_timestamps_from_audio(
         self,
