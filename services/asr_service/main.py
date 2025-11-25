@@ -166,23 +166,55 @@ async def websocket_streaming_asr(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket client connected")
 
-    # Initialize VAD detector with intelligent sentence segmentation
-    # Higher threshold = less sensitive (reduces false positives from noise)
-    vad = VADDetector(
-        sample_rate=16000,
-        threshold=0.6,  # Increased from 0.5 to reduce noise sensitivity
-        min_speech_duration_ms=400,  # Increased from 250ms to filter short noise bursts
-        min_silence_for_sentence_ms=500,  # 0.5s pause triggers sentence end
-        min_silence_for_session_ms=1500,  # 1.5s pause triggers session end
-        speech_pad_ms=30
-    )
+    # Default VAD configuration (can be overridden by client)
+    vad_config = {
+        'threshold': 0.6,
+        'min_speech_duration_ms': 400,
+        'min_silence_for_sentence_ms': 500,
+        'min_silence_for_session_ms': 1500
+    }
+    vad = None  # Will be initialized after receiving config or with defaults
 
     try:
         while True:
             # Receive message from client
             message = await websocket.receive_json()
 
-            if message.get("type") == "audio":
+            if message.get("type") == "config":
+                # Receive and apply VAD configuration from client
+                client_config = message.get("config", {})
+                vad_config.update(client_config)
+                logger.info(f"Received VAD config: {vad_config}")
+
+                # Initialize VAD with custom config
+                vad = VADDetector(
+                    sample_rate=16000,
+                    threshold=vad_config['threshold'],
+                    min_speech_duration_ms=vad_config['min_speech_duration_ms'],
+                    min_silence_for_sentence_ms=vad_config['min_silence_for_sentence_ms'],
+                    min_silence_for_session_ms=vad_config['min_silence_for_session_ms'],
+                    speech_pad_ms=30
+                )
+                logger.info("VAD detector initialized with custom config")
+
+                # Send acknowledgment
+                await websocket.send_json({
+                    "type": "config_ack",
+                    "config": vad_config
+                })
+
+            elif message.get("type") == "audio":
+                # Initialize VAD with defaults if not yet initialized
+                if vad is None:
+                    logger.warning("VAD not initialized, using default config")
+                    vad = VADDetector(
+                        sample_rate=16000,
+                        threshold=vad_config['threshold'],
+                        min_speech_duration_ms=vad_config['min_speech_duration_ms'],
+                        min_silence_for_sentence_ms=vad_config['min_silence_for_sentence_ms'],
+                        min_silence_for_session_ms=vad_config['min_silence_for_session_ms'],
+                        speech_pad_ms=30
+                    )
                 # Decode base64 audio data
                 import base64
                 audio_data = base64.b64decode(message["data"])

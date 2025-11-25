@@ -210,6 +210,69 @@
         <h3 style="margin-bottom: 10px; color: #333;">转写历史</h3>
         <div class="history" id="history"></div>
 
+        <div class="info" style="margin-bottom: 20px;">
+            <div class="info-title">⚙️ VAD 参数设置</div>
+            <div style="padding: 10px 0;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333;">
+                        <strong>语音检测阈值</strong>
+                        <span id="thresholdValue" style="color: #667eea;">0.6</span>
+                        <span style="color: #999; font-size: 12px;">(越高越不敏感)</span>
+                    </label>
+                    <input type="range" id="threshold" min="0.3" max="0.9" step="0.05" value="0.6"
+                           style="width: 100%;" oninput="updateThreshold(this.value)">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
+                        <span>0.3 (敏感)</span>
+                        <span>0.9 (不敏感)</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333;">
+                        <strong>最小语音时长</strong>
+                        <span id="minSpeechValue" style="color: #667eea;">400ms</span>
+                        <span style="color: #999; font-size: 12px;">(过滤短噪音)</span>
+                    </label>
+                    <input type="range" id="minSpeech" min="100" max="1000" step="50" value="400"
+                           style="width: 100%;" oninput="updateMinSpeech(this.value)">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
+                        <span>100ms</span>
+                        <span>1000ms</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333;">
+                        <strong>句子停顿时长</strong>
+                        <span id="sentenceValue" style="color: #667eea;">500ms</span>
+                    </label>
+                    <input type="range" id="sentencePause" min="300" max="1000" step="100" value="500"
+                           style="width: 100%;" oninput="updateSentence(this.value)">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
+                        <span>300ms</span>
+                        <span>1000ms</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; margin-bottom: 5px; color: #333;">
+                        <strong>会话结束时长</strong>
+                        <span id="sessionValue" style="color: #667eea;">1500ms</span>
+                    </label>
+                    <input type="range" id="sessionPause" min="1000" max="3000" step="100" value="1500"
+                           style="width: 100%;" oninput="updateSession(this.value)">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
+                        <span>1000ms</span>
+                        <span>3000ms</span>
+                    </div>
+                </div>
+
+                <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 13px; color: #856404;">
+                    ⚠️ 修改参数后需要重新开始录音才能生效
+                </div>
+            </div>
+        </div>
+
         <div class="info">
             <div class="info-title">💡 使用说明</div>
             <div class="info-text">
@@ -229,12 +292,41 @@
         let audioContext = null;
         let recordingHistory = [];
 
+        // VAD configuration
+        let vadConfig = {
+            threshold: 0.6,
+            min_speech_duration_ms: 400,
+            min_silence_for_sentence_ms: 500,
+            min_silence_for_session_ms: 1500
+        };
+
         const statusDiv = document.getElementById('status');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const resultText = document.getElementById('resultText');
         const resultMeta = document.getElementById('resultMeta');
         const historyDiv = document.getElementById('history');
+
+        // Update functions for sliders
+        function updateThreshold(value) {
+            vadConfig.threshold = parseFloat(value);
+            document.getElementById('thresholdValue').textContent = value;
+        }
+
+        function updateMinSpeech(value) {
+            vadConfig.min_speech_duration_ms = parseInt(value);
+            document.getElementById('minSpeechValue').textContent = value + 'ms';
+        }
+
+        function updateSentence(value) {
+            vadConfig.min_silence_for_sentence_ms = parseInt(value);
+            document.getElementById('sentenceValue').textContent = value + 'ms';
+        }
+
+        function updateSession(value) {
+            vadConfig.min_silence_for_session_ms = parseInt(value);
+            document.getElementById('sessionValue').textContent = value + 'ms';
+        }
 
         function updateStatus(status, message) {
             statusDiv.className = `status-indicator status-${status}`;
@@ -289,6 +381,14 @@
 
                 websocket.onopen = () => {
                     console.log('WebSocket connected');
+                    console.log('Sending VAD config:', vadConfig);
+
+                    // Send VAD configuration to server
+                    websocket.send(JSON.stringify({
+                        type: 'config',
+                        config: vadConfig
+                    }));
+
                     updateStatus('idle', '已连接 - 请开始说话');
                 };
 
