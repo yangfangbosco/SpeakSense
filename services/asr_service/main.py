@@ -149,19 +149,92 @@ async def get_model_info():
 @app.websocket("/asr/stream")
 async def websocket_streaming_asr(websocket: WebSocket):
     """
-    WebSocket endpoint for streaming ASR with automatic VAD-based segmentation
+    WebSocket endpoint for streaming ASR with intelligent sentence segmentation
 
-    Protocol:
-    1. Client connects and sends audio chunks (PCM 16kHz mono, int16)
-    2. Server processes with VAD, detects speech segments
-    3. When silence detected (speech ends), server transcribes and sends result
-    4. Server sends status updates: "speaking", "silence", "transcribing"
+    Features:
+    - Real-time speech recognition with automatic VAD-based segmentation
+    - Intelligent two-tier pause detection:
+      * 500ms pause → sentence end (transcribe and continue listening)
+      * 1500ms pause → session end (transcribe and stop recording)
+    - Configurable VAD parameters (threshold, durations)
+    - Automatic filtering of noise and empty audio
 
-    Message format (JSON):
-    - From client: {"type": "audio", "data": base64_encoded_audio}
-    - From server: {"type": "status", "status": "speaking|silence|transcribing"}
-    - From server: {"type": "result", "text": "...", "language": "..."}
-    - From server: {"type": "error", "message": "..."}
+    Connection Flow:
+    1. Client connects to WebSocket
+    2. (Optional) Client sends VAD configuration
+    3. Client streams audio chunks (PCM 16kHz mono, int16, base64-encoded)
+    4. Server processes with VAD and sends real-time status updates
+    5. Server transcribes complete sentences and sends results
+    6. Session auto-ends after 1.5s silence, or client can manually stop
+
+    Message Format (JSON):
+
+    Client → Server:
+    - {"type": "config", "config": {...}}
+      Configure VAD parameters before streaming
+      config: {
+        "threshold": 0.6,                      // Speech detection threshold (0.3-0.9)
+        "min_speech_duration_ms": 400,         // Minimum speech length (100-1000ms)
+        "min_silence_for_sentence_ms": 500,    // Pause to end sentence (300-1000ms)
+        "min_silence_for_session_ms": 1500     // Pause to end session (1000-3000ms)
+      }
+
+    - {"type": "audio", "data": "base64_audio_data"}
+      Send audio chunk (PCM 16kHz mono int16, base64-encoded)
+
+    - {"type": "reset"}
+      Reset VAD state (clear buffers)
+
+    Server → Client:
+    - {"type": "config_ack", "config": {...}}
+      Acknowledgment of configuration
+
+    - {"type": "status", "status": "speaking|transcribing"}
+      Real-time status updates during recording
+
+    - {"type": "result", "text": "转写文本", "language": "zh|en", "session_ended": true|false}
+      Transcription result. If session_ended=true, client should stop recording
+
+    - {"type": "session_end", "message": "..."}
+      Session ended without audio to transcribe (e.g., after sentence + 1s silence)
+      Client should stop recording
+
+    - {"type": "error", "message": "错误信息"}
+      Error occurred during processing
+
+    Audio Format:
+    - Sample Rate: 16000 Hz
+    - Channels: 1 (Mono)
+    - Format: PCM int16 (16-bit signed integer)
+    - Encoding: Base64 string in JSON message
+
+    Example Usage:
+    ```javascript
+    const ws = new WebSocket('ws://localhost:8001/asr/stream');
+
+    // Send configuration (optional)
+    ws.send(JSON.stringify({
+      type: 'config',
+      config: {threshold: 0.6, min_silence_for_sentence_ms: 500}
+    }));
+
+    // Send audio data
+    ws.send(JSON.stringify({
+      type: 'audio',
+      data: base64AudioData
+    }));
+
+    // Handle responses
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'result') {
+        console.log('转写结果:', msg.text);
+        if (msg.session_ended) {
+          ws.close(); // Stop recording
+        }
+      }
+    };
+    ```
     """
     await websocket.accept()
     logger.info("WebSocket client connected")
